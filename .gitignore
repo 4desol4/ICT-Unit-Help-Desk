@@ -1,0 +1,32 @@
+# Node
+node_modules/
+**/node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# Build output
+dist/
+build/
+frontend/dist/
+/.vite/
+
+# Editor/OS
+.vscode/
+.idea/
+.DS_Store
+
+# Env
+.env
+.env.local
+
+# Database
+*.sqlite
+*.db
+
+# Local development seed (do not commit)
+backend/seed.js

@@ -1,0 +1,15 @@
+# Backend
+node_modules/
+.env
+npm-debug.log*
+
+# Prisma
+prisma/dev.db
+
+# Local seed (keep out of VCS)
+seed.js
+node_modules
+# Keep environment variables out of version control
+.env
+
+/generated/prisma

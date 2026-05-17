@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Admin ────────────────────────────────
+// Only one admin exists — created via seed
+model Admin {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String   // bcrypt hashed
+  createdAt DateTime @default(now())
+}
+
+// ─── Agent ────────────────────────────────
+// Registered by admin — has name + password
+model Agent {
+  id        Int      @id @default(autoincrement())
+  name      String
+  username  String   @unique
+  password  String   // bcrypt hashed
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  tickets   Ticket[]
+  messages  Message[]
+}
+
+// ─── User ────────────────────────────────
+model User {
+  id           Int      @id @default(autoincrement())
+  oracleNumber String   @unique
+  createdAt    DateTime @default(now())
+  tickets      Ticket[]
+}
+
+// ─── Ticket ───────────────────────────────
+model Ticket {
+  id          Int       @id @default(autoincrement())
+  name        String    // staff member name
+  department  String
+  location    String
+  problem     String
+  priority    String    // high | medium | low
+  status      String    @default("open")
+  resolution  String?
+  resolvedAt  DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Which agent claimed this ticket
+  agentId     Int?
+  agent       Agent?    @relation(fields: [agentId], references: [id])
+
+  // Which user submitted this ticket
+  userId      Int?
+  user        User?     @relation(fields: [userId], references: [id])
+
+  // All chat messages for this ticket
+  messages    Message[]
+}
+
+// ─── Message ──────────────────────────────
+// Every chat bubble in a ticket conversation
+model Message {
+  id        Int      @id @default(autoincrement())
+  text      String
+  sender    String   // "user" or "agent"
+  senderName String  // display name
+  createdAt DateTime @default(now())
+
+  ticketId  Int
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  // null if sender is the staff user
+  agentId   Int?
+  agent     Agent?   @relation(fields: [agentId], references: [id])
+}
