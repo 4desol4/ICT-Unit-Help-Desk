@@ -1,6 +1,6 @@
-import { io } from 'socket.io-client'
+import { io } from "socket.io-client";
 
-const socketUrl = import.meta.env.VITE_SOCKET_URL || window.location.origin
-const socket = io(socketUrl)
+const socketUrl = import.meta.env.VITE_SOCKET_URL || window.location.origin;
+const socket = io(socketUrl);
 
-export default socket
+export default socket;

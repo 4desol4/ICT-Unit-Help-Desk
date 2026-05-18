@@ -62,5 +62,3 @@ npm run dev
 **Files added**
 - `.gitignore` files were added at repository root and inside `backend/` and `frontend/` to prevent sensitive or large files from being tracked.
 
-**License**
-- Add a LICENSE file or specify a license for this project.
