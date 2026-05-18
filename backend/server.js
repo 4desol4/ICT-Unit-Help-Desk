@@ -22,7 +22,20 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(cors());
+const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+const allowedOrigins = [clientUrl, "http://localhost:5173"];
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS blocked: ${origin}`));
+      }
+    },
+  })
+);
 app.use(express.json());
 
 // ─── Routes ───────────────────────────────
@@ -42,21 +55,8 @@ io.on("connection", (socket) => {
 
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, '0.0.0.0', () => {
-  const os = require('os')
-  const interfaces = os.networkInterfaces()
-  let localIP = 'localhost'
-  
-  // Find local IP
-  for (const [key, addrs] of Object.entries(interfaces)) {
-    for (const addr of addrs) {
-      if (addr.family === 'IPv4' && !addr.internal) {
-        localIP = addr.address
-        break
-      }
-    }
+  console.log(`\n✅ Server running on http://localhost:${PORT}`);
+  if (process.env.NODE_ENV !== 'production') {
+    console.log(`📡 Dev frontend: http://localhost:5173`);
   }
-
-  console.log(`\n✅ Server running on http://localhost:${PORT}`)
-  console.log(`📡 Local WiFi: http://${localIP}:${PORT}`)
-  console.log(`🔗 Give staff: http://${localIP}:5173\n`)
-})
+});
