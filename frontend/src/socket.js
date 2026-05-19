@@ -1,9 +1,12 @@
 import { io } from "socket.io-client";
 
+// Production: use full backend URL; Dev: use window origin (localhost)
 const socketUrl =
-  typeof __VITE_SOCKET_URL__ !== "undefined"
-    ? __VITE_SOCKET_URL__
-    : import.meta.env.VITE_SOCKET_URL || window.location.origin;
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1"
+    ? window.location.origin // Use localhost origin in dev
+    : "https://ict-unit-help-desk.onrender.com"; // Use full backend URL in production
+
 const socket = io(socketUrl);
 
 export default socket;

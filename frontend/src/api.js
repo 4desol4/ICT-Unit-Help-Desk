@@ -1,9 +1,12 @@
 import axios from "axios";
 
+// Production: use full backend URL; Dev: use proxy
 const baseURL =
-  typeof __VITE_API_BASE__ !== "undefined"
-    ? __VITE_API_BASE__
-    : import.meta.env.VITE_API_BASE || "/api";
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1"
+    ? "/api" // Use Vite proxy in dev
+    : "https://ict-unit-help-desk.onrender.com/api"; // Use full URL in production
+
 const api = axios.create({ baseURL });
 
 // ─── Auth token helpers ───────────────────
