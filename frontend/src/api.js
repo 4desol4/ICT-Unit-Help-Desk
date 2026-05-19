@@ -7,6 +7,9 @@ const baseURL =
     ? "/api" // Use Vite proxy in dev
     : "https://ict-unit-help-desk.onrender.com/api"; // Use full URL in production
 
+console.log("🔵 Detected hostname:", window.location.hostname);
+console.log("🔵 Using API baseURL:", baseURL);
+
 const api = axios.create({ baseURL });
 
 // ─── Auth token helpers ───────────────────
