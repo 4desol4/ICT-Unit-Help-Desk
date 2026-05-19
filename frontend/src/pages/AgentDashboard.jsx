@@ -2,7 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
-import { getTickets, updateTicket, getMessages, getAgentStats } from "../api";
+import {
+  getTickets,
+  updateTicket,
+  getMessages,
+  getAgentStats,
+  sendAgentMessage,
+} from "../api";
 import socket from "../socket";
 import PriorityBadge from "../components/PriorityBadge";
 import StatusBadge from "../components/StatusBadge";
@@ -141,9 +147,7 @@ function DashboardStats({ tickets, agentStats }) {
 function AgentTicketCard({ ticket, onSelect }) {
   const { isDark, colors } = useTheme();
 
-  const hours = Math.floor(
-    (Date.now() - new Date(ticket.createdAt)) / 3600000
-  );
+  const hours = Math.floor((Date.now() - new Date(ticket.createdAt)) / 3600000);
 
   const timeAgo = hours > 0 ? `${hours}h ago` : "now";
 
@@ -159,9 +163,7 @@ function AgentTicketCard({ ticket, onSelect }) {
         overflow: "hidden",
         transition: "0.3s ease",
         background: isDark ? "rgba(255,255,255,0.03)" : "#fff",
-        border: `1px solid ${
-          isDark ? "rgba(255,255,255,0.08)" : "#e2e8f0"
-        }`,
+        border: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "#e2e8f0"}`,
       }}
     >
       {/* left indicator */}
@@ -176,8 +178,8 @@ function AgentTicketCard({ ticket, onSelect }) {
             ticket.priority === "high"
               ? "#ef4444"
               : ticket.priority === "medium"
-              ? "#f59e0b"
-              : "#10b981",
+                ? "#f59e0b"
+                : "#10b981",
         }}
       />
 
@@ -280,12 +282,7 @@ function AgentTicketCard({ ticket, onSelect }) {
 // ─────────────────────────────────────────────
 // Modal
 // ─────────────────────────────────────────────
-function TicketDetailModal({
-  ticket,
-  agentId,
-  onClose,
-  onUpdate,
-}) {
+function TicketDetailModal({ ticket, agentId, onClose, onUpdate }) {
   const { isDark, colors } = useTheme();
 
   const [status, setStatus] = useState(ticket.status);
@@ -317,10 +314,7 @@ function TicketDetailModal({
       const res = await updateTicket(ticket.id, {
         status,
         agentId: ticket.agentId || agentId,
-        resolution:
-          status === "resolved"
-            ? notes
-            : ticket.resolution,
+        resolution: status === "resolved" ? notes : ticket.resolution,
       });
 
       onUpdate(res.data);
@@ -343,23 +337,7 @@ function TicketDetailModal({
     setLoadingMsg(true);
 
     try {
-      const res = await fetch(
-        "/api/messages/" + ticket.id + "/agent",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem(
-              "ict_token"
-            )}`,
-          },
-          body: JSON.stringify({
-            text: newMsg,
-          }),
-        }
-      );
-
-      const msg = await res.json();
+      const msg = await sendAgentMessage(ticket.id, { text: newMsg });
 
       setMessages((prev) => [...prev, msg]);
 
@@ -371,16 +349,13 @@ function TicketDetailModal({
     }
   };
 
-  const date = new Date(ticket.createdAt).toLocaleString(
-    "en-GB",
-    {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    }
-  );
+  const date = new Date(ticket.createdAt).toLocaleString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
   return (
     <div
@@ -405,12 +380,8 @@ function TicketDetailModal({
           maxHeight: "95vh",
           overflow: "hidden",
           borderRadius: 28,
-          background: isDark
-            ? "rgba(15,23,42,0.98)"
-            : "#fff",
-          border: `1px solid ${
-            isDark ? "rgba(255,255,255,0.08)" : "#e2e8f0"
-          }`,
+          background: isDark ? "rgba(15,23,42,0.98)" : "#fff",
+          border: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "#e2e8f0"}`,
           display: "flex",
           flexDirection: "column",
         }}
@@ -420,9 +391,7 @@ function TicketDetailModal({
           style={{
             padding: "20px 22px",
             borderBottom: `1px solid ${
-              isDark
-                ? "rgba(255,255,255,0.06)"
-                : "#e2e8f0"
+              isDark ? "rgba(255,255,255,0.06)" : "#e2e8f0"
             }`,
             display: "flex",
             alignItems: "center",
@@ -450,9 +419,7 @@ function TicketDetailModal({
               borderRadius: 12,
               border: "none",
               cursor: "pointer",
-              background: isDark
-                ? "rgba(255,255,255,0.06)"
-                : "#f1f5f9",
+              background: isDark ? "rgba(255,255,255,0.06)" : "#f1f5f9",
               color: colors.text,
             }}
           >
@@ -491,13 +458,9 @@ function TicketDetailModal({
                 borderRadius: 18,
                 lineHeight: 1.7,
                 marginBottom: 20,
-                background: isDark
-                  ? "rgba(255,255,255,0.03)"
-                  : "#f8fafc",
+                background: isDark ? "rgba(255,255,255,0.03)" : "#f8fafc",
                 border: `1px solid ${
-                  isDark
-                    ? "rgba(255,255,255,0.06)"
-                    : "#e2e8f0"
+                  isDark ? "rgba(255,255,255,0.06)" : "#e2e8f0"
                 }`,
                 color: colors.text,
               }}
@@ -538,9 +501,7 @@ function TicketDetailModal({
                     flexWrap: "wrap",
                     paddingBottom: 10,
                     borderBottom: `1px solid ${
-                      isDark
-                        ? "rgba(255,255,255,0.05)"
-                        : "#f1f5f9"
+                      isDark ? "rgba(255,255,255,0.05)" : "#f1f5f9"
                     }`,
                   }}
                 >
@@ -588,11 +549,7 @@ function TicketDetailModal({
                   marginBottom: 18,
                 }}
               >
-                {[
-                  "open",
-                  "in_progress",
-                  "resolved",
-                ].map((s) => (
+                {["open", "in_progress", "resolved"].map((s) => (
                   <button
                     key={s}
                     onClick={() => setStatus(s)}
@@ -607,12 +564,9 @@ function TicketDetailModal({
                         status === s
                           ? "linear-gradient(135deg,#6366f1,#8b5cf6)"
                           : isDark
-                          ? "rgba(255,255,255,0.05)"
-                          : "#f1f5f9",
-                      color:
-                        status === s
-                          ? "#fff"
-                          : colors.textSecondary,
+                            ? "rgba(255,255,255,0.05)"
+                            : "#f1f5f9",
+                      color: status === s ? "#fff" : colors.textSecondary,
                     }}
                   >
                     {s.replace("_", " ")}
@@ -623,9 +577,7 @@ function TicketDetailModal({
               {status === "resolved" && (
                 <textarea
                   value={notes}
-                  onChange={(e) =>
-                    setNotes(e.target.value)
-                  }
+                  onChange={(e) => setNotes(e.target.value)}
                   placeholder="Describe the solution..."
                   style={{
                     width: "100%",
@@ -635,13 +587,9 @@ function TicketDetailModal({
                     padding: 16,
                     outline: "none",
                     color: colors.text,
-                    background: isDark
-                      ? "rgba(255,255,255,0.03)"
-                      : "#fff",
+                    background: isDark ? "rgba(255,255,255,0.03)" : "#fff",
                     border: `1px solid ${
-                      isDark
-                        ? "rgba(255,255,255,0.08)"
-                        : "#e2e8f0"
+                      isDark ? "rgba(255,255,255,0.08)" : "#e2e8f0"
                     }`,
                   }}
                 />
@@ -664,10 +612,7 @@ function TicketDetailModal({
                 marginBottom: 14,
               }}
             >
-              <MessageCircle
-                size={18}
-                color={colors.text}
-              />
+              <MessageCircle size={18} color={colors.text} />
 
               <h3
                 style={{
@@ -689,13 +634,9 @@ function TicketDetailModal({
                 padding: 16,
                 borderRadius: 20,
                 marginBottom: 16,
-                background: isDark
-                  ? "rgba(0,0,0,0.2)"
-                  : "#f8fafc",
+                background: isDark ? "rgba(0,0,0,0.2)" : "#f8fafc",
                 border: `1px solid ${
-                  isDark
-                    ? "rgba(255,255,255,0.05)"
-                    : "#e2e8f0"
+                  isDark ? "rgba(255,255,255,0.05)" : "#e2e8f0"
                 }`,
                 display: "flex",
                 flexDirection: "column",
@@ -719,9 +660,7 @@ function TicketDetailModal({
                     style={{
                       display: "flex",
                       justifyContent:
-                        msg.sender === "agent"
-                          ? "flex-end"
-                          : "flex-start",
+                        msg.sender === "agent" ? "flex-end" : "flex-start",
                     }}
                   >
                     <div
@@ -735,12 +674,9 @@ function TicketDetailModal({
                           msg.sender === "agent"
                             ? "linear-gradient(135deg,#6366f1,#8b5cf6)"
                             : isDark
-                            ? "rgba(255,255,255,0.08)"
-                            : "#e2e8f0",
-                        color:
-                          msg.sender === "agent"
-                            ? "#fff"
-                            : colors.text,
+                              ? "rgba(255,255,255,0.08)"
+                              : "#e2e8f0",
+                        color: msg.sender === "agent" ? "#fff" : colors.text,
                       }}
                     >
                       {msg.text}
@@ -758,44 +694,32 @@ function TicketDetailModal({
             >
               <input
                 value={newMsg}
-                onChange={(e) =>
-                  setNewMsg(e.target.value)
-                }
+                onChange={(e) => setNewMsg(e.target.value)}
                 placeholder="Type message..."
-                onKeyDown={(e) =>
-                  e.key === "Enter" &&
-                  handleSendMessage()
-                }
+                onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
                 style={{
                   flex: 1,
                   padding: "14px 16px",
                   borderRadius: 16,
                   outline: "none",
                   border: `1px solid ${
-                    isDark
-                      ? "rgba(255,255,255,0.08)"
-                      : "#e2e8f0"
+                    isDark ? "rgba(255,255,255,0.08)" : "#e2e8f0"
                   }`,
-                  background: isDark
-                    ? "rgba(255,255,255,0.03)"
-                    : "#fff",
+                  background: isDark ? "rgba(255,255,255,0.03)" : "#fff",
                   color: colors.text,
                 }}
               />
 
               <button
                 onClick={handleSendMessage}
-                disabled={
-                  loadingMsg || !newMsg.trim()
-                }
+                disabled={loadingMsg || !newMsg.trim()}
                 style={{
                   width: 50,
                   height: 50,
                   borderRadius: 16,
                   border: "none",
                   cursor: "pointer",
-                  background:
-                    "linear-gradient(135deg,#6366f1,#8b5cf6)",
+                  background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
                   color: "#fff",
                   display: "flex",
                   alignItems: "center",
@@ -803,10 +727,7 @@ function TicketDetailModal({
                 }}
               >
                 {loadingMsg ? (
-                  <Loader2
-                    size={18}
-                    className="spin"
-                  />
+                  <Loader2 size={18} className="spin" />
                 ) : (
                   <Send size={18} />
                 )}
@@ -820,9 +741,7 @@ function TicketDetailModal({
           style={{
             padding: 20,
             borderTop: `1px solid ${
-              isDark
-                ? "rgba(255,255,255,0.05)"
-                : "#e2e8f0"
+              isDark ? "rgba(255,255,255,0.05)" : "#e2e8f0"
             }`,
             display: "flex",
             justifyContent: "flex-end",
@@ -837,9 +756,7 @@ function TicketDetailModal({
               borderRadius: 14,
               border: "none",
               cursor: "pointer",
-              background: isDark
-                ? "rgba(255,255,255,0.05)"
-                : "#f1f5f9",
+              background: isDark ? "rgba(255,255,255,0.05)" : "#f1f5f9",
               color: colors.text,
               fontWeight: 700,
             }}
@@ -865,11 +782,7 @@ function TicketDetailModal({
               gap: 8,
             }}
           >
-            {saved ? (
-              <CheckCircle2 size={18} />
-            ) : (
-              <Save size={18} />
-            )}
+            {saved ? <CheckCircle2 size={18} /> : <Save size={18} />}
 
             {saved ? "Updated!" : "Save"}
           </button>
@@ -891,19 +804,15 @@ export default function AgentDashboard() {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const [selectedTicket, setSelected] =
-    useState(null);
+  const [selectedTicket, setSelected] = useState(null);
 
-  const [filter, setFilter] =
-    useState("unassigned");
+  const [filter, setFilter] = useState("unassigned");
 
-  const [newAlert, setNewAlert] =
-    useState(false);
+  const [newAlert, setNewAlert] = useState(false);
 
-  const [agentStats, setAgentStats] =
-    useState({
-      resolvedCount: 0,
-    });
+  const [agentStats, setAgentStats] = useState({
+    resolvedCount: 0,
+  });
 
   useEffect(() => {
     if (!user || user.role !== "agent") {
@@ -929,10 +838,7 @@ export default function AgentDashboard() {
       const res = await getAgentStats(user.id);
 
       setAgentStats({
-        resolvedCount:
-          res.data.resolvedCount ??
-          res.data.resolved ??
-          0,
+        resolvedCount: res.data.resolvedCount ?? res.data.resolved ?? 0,
       });
     } catch (err) {
       console.error(err);
@@ -956,11 +862,7 @@ export default function AgentDashboard() {
     });
 
     socket.on("ticket_updated", (u) => {
-      setTickets((prev) =>
-        prev.map((t) =>
-          t.id === u.id ? u : t
-        )
-      );
+      setTickets((prev) => prev.map((t) => (t.id === u.id ? u : t)));
     });
 
     return () => {
@@ -971,16 +873,10 @@ export default function AgentDashboard() {
 
   const filtered =
     filter === "unassigned"
-      ? tickets.filter(
-          (t) =>
-            !t.agentId &&
-            t.status !== "resolved"
-        )
+      ? tickets.filter((t) => !t.agentId && t.status !== "resolved")
       : filter === "my"
-      ? tickets.filter(
-          (t) => t.agentId === user?.id
-        )
-      : tickets;
+        ? tickets.filter((t) => t.agentId === user?.id)
+        : tickets;
 
   return (
     <div
@@ -1050,8 +946,7 @@ export default function AgentDashboard() {
                 borderRadius: 22,
                 background: "rgba(255,255,255,0.12)",
                 backdropFilter: "blur(10px)",
-                border:
-                  "1px solid rgba(255,255,255,0.2)",
+                border: "1px solid rgba(255,255,255,0.2)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -1063,8 +958,7 @@ export default function AgentDashboard() {
             <div>
               <h1
                 style={{
-                  fontSize:
-                    "clamp(2rem,5vw,3.4rem)",
+                  fontSize: "clamp(2rem,5vw,3.4rem)",
                   fontWeight: 800,
                   color: "#fff",
                   lineHeight: 1.1,
@@ -1074,11 +968,9 @@ export default function AgentDashboard() {
                 Welcome back,{" "}
                 <span
                   style={{
-                    background:
-                      "linear-gradient(90deg,#ddd6fe,#fff)",
+                    background: "linear-gradient(90deg,#ddd6fe,#fff)",
                     WebkitBackgroundClip: "text",
-                    WebkitTextFillColor:
-                      "transparent",
+                    WebkitTextFillColor: "transparent",
                   }}
                 >
                   {user?.name}
@@ -1117,8 +1009,7 @@ export default function AgentDashboard() {
               marginBottom: 24,
               padding: "18px 20px",
               borderRadius: 24,
-              background:
-                "linear-gradient(135deg,#6366f1,#8b5cf6)",
+              background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
               color: "#fff",
               display: "flex",
               gap: 12,
@@ -1131,10 +1022,7 @@ export default function AgentDashboard() {
           </div>
         )}
 
-        <DashboardStats
-          tickets={tickets}
-          agentStats={agentStats}
-        />
+        <DashboardStats tickets={tickets} agentStats={agentStats} />
 
         {/* main card */}
         <div
@@ -1142,16 +1030,11 @@ export default function AgentDashboard() {
             padding: "24px",
             borderRadius: 34,
             backdropFilter: "blur(20px)",
-            background: isDark
-              ? "rgba(15,23,42,0.78)"
-              : "#fff",
+            background: isDark ? "rgba(15,23,42,0.78)" : "#fff",
             border: `1px solid ${
-              isDark
-                ? "rgba(255,255,255,0.08)"
-                : "#e2e8f0"
+              isDark ? "rgba(255,255,255,0.08)" : "#e2e8f0"
             }`,
-            boxShadow:
-              "0 30px 80px rgba(0,0,0,0.12)",
+            boxShadow: "0 30px 80px rgba(0,0,0,0.12)",
           }}
         >
           {/* tabs */}
@@ -1182,9 +1065,7 @@ export default function AgentDashboard() {
             ].map((tab) => (
               <button
                 key={tab.key}
-                onClick={() =>
-                  setFilter(tab.key)
-                }
+                onClick={() => setFilter(tab.key)}
                 style={{
                   padding: "13px 18px",
                   borderRadius: 16,
@@ -1199,12 +1080,9 @@ export default function AgentDashboard() {
                     filter === tab.key
                       ? "linear-gradient(135deg,#6366f1,#8b5cf6)"
                       : isDark
-                      ? "rgba(255,255,255,0.05)"
-                      : "#f1f5f9",
-                  color:
-                    filter === tab.key
-                      ? "#fff"
-                      : colors.textSecondary,
+                        ? "rgba(255,255,255,0.05)"
+                        : "#f1f5f9",
+                  color: filter === tab.key ? "#fff" : colors.textSecondary,
                 }}
               >
                 <tab.icon size={18} />
@@ -1221,11 +1099,7 @@ export default function AgentDashboard() {
                 padding: "100px 0",
               }}
             >
-              <Loader2
-                size={44}
-                className="spin"
-                color="#6366f1"
-              />
+              <Loader2 size={44} className="spin" color="#6366f1" />
 
               <p
                 style={{
@@ -1243,13 +1117,9 @@ export default function AgentDashboard() {
                 textAlign: "center",
                 padding: "90px 20px",
                 borderRadius: 28,
-                background: isDark
-                  ? "rgba(255,255,255,0.02)"
-                  : "#f8fafc",
+                background: isDark ? "rgba(255,255,255,0.02)" : "#f8fafc",
                 border: `2px dashed ${
-                  isDark
-                    ? "rgba(255,255,255,0.06)"
-                    : "#e2e8f0"
+                  isDark ? "rgba(255,255,255,0.06)" : "#e2e8f0"
                 }`,
               }}
             >
@@ -1278,8 +1148,7 @@ export default function AgentDashboard() {
                   color: colors.textSecondary,
                 }}
               >
-                No tickets available in this
-                category.
+                No tickets available in this category.
               </p>
             </div>
           ) : (
@@ -1379,11 +1248,7 @@ export default function AgentDashboard() {
           onClose={() => setSelected(null)}
           onUpdate={(updated) => {
             setTickets((prev) =>
-              prev.map((t) =>
-                t.id === updated.id
-                  ? updated
-                  : t
-              )
+              prev.map((t) => (t.id === updated.id ? updated : t)),
             );
           }}
         />

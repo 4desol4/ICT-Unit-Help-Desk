@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import { userLogin } from "../api";
 import {
   Users,
   AlertTriangle,
@@ -38,18 +39,7 @@ export default function UserLogin() {
     setError("");
 
     try {
-      const response = await fetch("/api/auth/user/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data.error || "Login failed");
-        return;
-      }
+      const data = await userLogin(form);
 
       login(
         {
@@ -62,7 +52,7 @@ export default function UserLogin() {
 
       navigate("/");
     } catch (err) {
-      setError("Something went wrong. Please try again.");
+      setError(err.response?.data?.error || "Login failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -227,12 +217,8 @@ export default function UserLogin() {
           gridTemplateColumns: "1fr 460px",
           overflow: "hidden",
           borderRadius: 34,
-          border: `1px solid ${
-            isDark ? "rgba(255,255,255,0.08)" : "#e2e8f0"
-          }`,
-          background: isDark
-            ? "rgba(15,23,42,0.78)"
-            : "rgba(255,255,255,0.94)",
+          border: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "#e2e8f0"}`,
+          background: isDark ? "rgba(15,23,42,0.78)" : "rgba(255,255,255,0.94)",
           backdropFilter: "blur(18px)",
           boxShadow: "0 30px 80px rgba(0,0,0,0.18)",
           position: "relative",
@@ -517,9 +503,7 @@ export default function UserLogin() {
                   padding: "16px 18px",
                   borderRadius: 18,
                   border: `1.5px solid ${colors.border}`,
-                  background: isDark
-                    ? "rgba(15,23,42,0.85)"
-                    : "#ffffff",
+                  background: isDark ? "rgba(15,23,42,0.85)" : "#ffffff",
                   color: colors.text,
                   fontSize: 15,
                   transition: "all 0.2s ease",
@@ -600,9 +584,7 @@ export default function UserLogin() {
               marginTop: 24,
               padding: 18,
               borderRadius: 20,
-              background: isDark
-                ? "rgba(30,41,59,0.65)"
-                : "#f0fdf4",
+              background: isDark ? "rgba(30,41,59,0.65)" : "#f0fdf4",
               border: `1px solid ${
                 isDark ? "rgba(255,255,255,0.05)" : "#dcfce7"
               }`,
@@ -617,9 +599,9 @@ export default function UserLogin() {
             <Zap size={16} style={{ marginTop: 2, flexShrink: 0 }} />
 
             <div>
-              <strong>Quick Access:</strong> Your Oracle number gives you
-              access to your submitted tickets, support conversations, and
-              ticket updates instantly.
+              <strong>Quick Access:</strong> Your Oracle number gives you access
+              to your submitted tickets, support conversations, and ticket
+              updates instantly.
             </div>
           </div>
         </div>
