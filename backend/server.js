@@ -23,7 +23,15 @@ const clientOrigins = (
   .filter(Boolean);
 
 const io = new Server(server, {
-  cors: { origin: clientOrigins, methods: ["GET", "POST"], credentials: true },
+  cors: {
+    origin: clientOrigins,
+    methods: ["GET", "POST"],
+    credentials: true,
+    allowEIO3: true,
+  },
+  transports: ["websocket", "polling"],
+  pingInterval: 25000,
+  pingTimeout: 60000,
 });
 
 // Attach io to every request
