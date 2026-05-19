@@ -1,6 +1,16 @@
 {
   "version": 2,
-  "builds": [{ "src": "package.json", "use": "@vercel/static-build" }],
+  "env": {
+    "VITE_API_BASE": "https://ict-unit-help-desk.onrender.com/api",
+    "VITE_SOCKET_URL": "https://ict-unit-help-desk.onrender.com"
+  },
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": { "distDir": "dist" }
+    }
+  ],
   "routes": [
     {
       "src": "/assets/(.*)",
