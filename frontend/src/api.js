@@ -1,6 +1,9 @@
 import axios from "axios";
 
-const baseURL = import.meta.env.VITE_API_BASE || "/api";
+const baseURL =
+  typeof __VITE_API_BASE__ !== "undefined"
+    ? __VITE_API_BASE__
+    : import.meta.env.VITE_API_BASE || "/api";
 const api = axios.create({ baseURL });
 
 // ─── Auth token helpers ───────────────────
