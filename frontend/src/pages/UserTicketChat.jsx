@@ -362,6 +362,21 @@ export default function UserTicketChat() {
               >
                 Support team will respond shortly.
               </p>
+
+              {/* Images if any */}
+              {ticket.images && ticket.images.length > 0 && (
+                <div style={{ marginTop: 12 }}>
+                  <p
+                    style={{
+                      color: colors.textSecondary,
+                      fontSize: 12,
+                      marginBottom: 8,
+                    }}
+                  >
+                    📸 {ticket.images.length} screenshot(s) attached
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

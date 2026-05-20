@@ -262,9 +262,9 @@ export default function UserLogin() {
               background: `
                 linear-gradient(
                   135deg,
-                  rgba(2,6,23,0.86) 0%,
-                  rgba(59,130,246,0.62) 45%,
-                  rgba(15,23,42,0.82) 100%
+                  rgba(2,6,23,0.06) 0%,
+                  rgba(59,130,246,0.02) 45%,
+                  rgba(15,23,42,0.03) 100%
                 )
               `,
             }}

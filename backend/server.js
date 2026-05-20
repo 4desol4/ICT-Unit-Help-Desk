@@ -8,6 +8,7 @@ const ticketRoutes = require("./routes/tickets");
 const authRoutes = require("./routes/auth");
 const agentRoutes = require("./routes/agents");
 const messageRoutes = require("./routes/messages");
+const imageRoutes = require("./routes/images");
 
 const app = express();
 const server = http.createServer(app);
@@ -61,6 +62,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/agents", agentRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/messages", messageRoutes);
+app.use("/api/images", imageRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "ICT Support Desk API running ✅" });

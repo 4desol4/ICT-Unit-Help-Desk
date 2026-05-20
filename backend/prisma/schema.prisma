@@ -48,6 +48,7 @@ model Ticket {
   status      String    @default("open")
   resolution  String?
   resolvedAt  DateTime?
+  images      String[]  @default([])  // base64 encoded images
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 

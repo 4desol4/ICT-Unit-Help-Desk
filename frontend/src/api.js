@@ -90,3 +90,10 @@ export const createAgent = (data) => api.post("/agents", data);
 export const updateAgent = (id, data) => api.patch(`/agents/${id}`, data);
 export const deleteAgent = (id) => api.delete(`/agents/${id}`);
 export const getAgentStats = (id) => api.get(`/agents/${id}/stats`);
+
+// ─── Images ───────────────────────────────
+export const uploadImage = (imageDataURI, ticketId) =>
+  api.post("/images/upload", {
+    image: imageDataURI,
+    ticketId,
+  });

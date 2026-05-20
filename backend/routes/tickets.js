@@ -135,7 +135,7 @@ router.post("/", userAuth, ticketValidation, async (req, res) => {
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { name, department, location, problem, priority } = req.body;
+  const { name, department, location, problem, priority, images } = req.body;
 
   try {
     const ticket = await prisma.ticket.create({
@@ -146,6 +146,7 @@ router.post("/", userAuth, ticketValidation, async (req, res) => {
         location,
         problem,
         priority,
+        images: Array.isArray(images) ? images : [],
       },
     });
 

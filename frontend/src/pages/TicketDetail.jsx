@@ -296,6 +296,70 @@ export default function TicketDetail() {
           </div>
         </div>
 
+        {/* Ticket Images - If any */}
+        {ticket.images && ticket.images.length > 0 && (
+          <div
+            style={{
+              padding: "20px 24px",
+              borderBottom: "1px solid #e2e8f0",
+              background: isDark
+                ? "rgba(15,23,42,0.5)"
+                : "rgba(255,255,255,0.5)",
+            }}
+          >
+            <h4
+              style={{
+                margin: "0 0 12px 0",
+                color: colors.text,
+                fontSize: 13,
+                fontWeight: 700,
+              }}
+            >
+              Attached Screenshots
+            </h4>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fill, minmax(120px, 1fr))",
+                gap: 12,
+              }}
+            >
+              {ticket.images.map((image, index) => (
+                <a
+                  key={index}
+                  href={image}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    borderRadius: 12,
+                    overflow: "hidden",
+                    border: `1px solid ${colors.border}`,
+                    cursor: "pointer",
+                    transition: "transform 0.2s ease",
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.transform = "scale(1.05)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.transform = "scale(1)")
+                  }
+                >
+                  <img
+                    src={image}
+                    alt={`Ticket screenshot ${index + 1}`}
+                    style={{
+                      width: "100%",
+                      height: 120,
+                      objectFit: "cover",
+                      display: "block",
+                    }}
+                  />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Chat Section */}
         <div
           style={{

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { submitTicket, getMyTickets } from "../api";
+import { submitTicket, getMyTickets, uploadImage } from "../api";
 import { useTheme } from "../context/ThemeContext";
 import { useAuth } from "../context/AuthContext";
 
@@ -22,16 +22,30 @@ import {
 } from "lucide-react";
 
 const DEPARTMENTS = [
-  "Accounts",
-  "HR",
-  "IT",
-  "Admin",
-  "Operations",
-  "Sales",
-  "Marketing",
-  "Management",
-  "Reception",
-  "Other",
+  "Honourable Commisioner",
+  "Permanent Secretary",
+  "Senior Special Adviser(SSA)",
+  "Honourable Commisioner Ante Room",
+  "Permanent Secretary Ante Room",
+  "ICT Unit",
+  "Public Affairs Unit",
+  "Internal Audit Unit",
+  "Finance & Accounts Dept",
+  "Science & Tech Dept",
+  "Procurement Unit",
+  "PPR&S Dept",
+  "Project Unit",
+  "Curriculum Services Dept (CSD)",
+  "Multilingual Dept",
+  "Education Resource Centre (ERC)",
+  "Child Guidiance Dept",
+  "Co-Curricular Dept",
+  "Admin & HR Dept",
+  "Lagos State Comprehensive School Program (LSCSP) Dept",
+  "Basic Education Services (BES) Dept",
+  "Planning & Budget Unit",
+  "Public Private Partnership (PPP)",
+  "Legal unit",
 ];
 
 const PRIORITIES = [
@@ -462,6 +476,7 @@ export default function SubmitTicket() {
     location: "",
     problem: "",
     priority: "",
+    images: [],
   });
 
   const [errors, setErrors] = useState({});
@@ -469,6 +484,8 @@ export default function SubmitTicket() {
   const [success, setSuccess] = useState(false);
   const [pastTickets, setPastTickets] = useState([]);
   const [selectedTicketId, setSelectedTicketId] = useState(null);
+  const [dragActive, setDragActive] = useState(false);
+  const [uploadingImages, setUploadingImages] = useState(false);
 
   useEffect(() => {
     if (!user || user.role !== "user") {
@@ -497,6 +514,109 @@ export default function SubmitTicket() {
     setErrors((prev) => ({
       ...prev,
       [field]: "",
+    }));
+  };
+
+  // Convert file to base64
+  const fileToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+    });
+  };
+
+  // Handle file selection with size validation
+  const handleFileChange = async (files) => {
+    const MAX_FILE_SIZE = 500 * 1024; // 500 KB in bytes
+    const imageFiles = Array.from(files).filter((file) =>
+      file.type.startsWith("image/"),
+    );
+
+    if (imageFiles.length === 0) {
+      setErrors((prev) => ({
+        ...prev,
+        images: "Please select valid image files",
+      }));
+      return;
+    }
+
+    // Check file sizes
+    for (const file of imageFiles) {
+      if (file.size > MAX_FILE_SIZE) {
+        setErrors((prev) => ({
+          ...prev,
+          images: `Image "${file.name}" is too large. Max size: 500 KB`,
+        }));
+        return;
+      }
+    }
+
+    if (imageFiles.length + form.images.length > 5) {
+      setErrors((prev) => ({
+        ...prev,
+        images: "Maximum 5 images allowed",
+      }));
+      return;
+    }
+
+    setUploadingImages(true);
+
+    try {
+      // Convert to base64 and upload to Cloudinary
+      const uploadPromises = imageFiles.map(async (file) => {
+        const base64 = await fileToBase64(file);
+        // Use a temporary ID for now, will get real ID after ticket creation
+        const response = await uploadImage(base64, "temp");
+        return response.data.url;
+      });
+
+      const imageUrls = await Promise.all(uploadPromises);
+
+      setForm((prev) => ({
+        ...prev,
+        images: [...prev.images, ...imageUrls],
+      }));
+
+      setErrors((prev) => ({
+        ...prev,
+        images: "",
+      }));
+    } catch (error) {
+      console.error("Error uploading images:", error);
+      setErrors((prev) => ({
+        ...prev,
+        images: "Error uploading images. Please try again.",
+      }));
+    } finally {
+      setUploadingImages(false);
+    }
+  };
+
+  // Handle drag and drop
+  const handleDrag = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    handleFileChange(e.dataTransfer.files);
+  };
+
+  // Remove image
+  const removeImage = (index) => {
+    setForm((prev) => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index),
     }));
   };
 
@@ -538,6 +658,7 @@ export default function SubmitTicket() {
         location: "",
         problem: "",
         priority: "",
+        images: [],
       });
 
       loadPastTickets();
@@ -1189,9 +1310,9 @@ export default function SubmitTicket() {
               background: `
                 linear-gradient(
                   135deg,
-                  rgba(2,6,23,0.82),
-                  rgba(79,70,229,0.55),
-                  rgba(15,23,42,0.72)
+                  rgba(2,6,23,0.12),
+                  rgba(79,70,229,0.05),
+                  rgba(15,23,42,0.12)
                 )
               `,
             }}
@@ -1631,6 +1752,219 @@ export default function SubmitTicket() {
                   );
                 })}
               </div>
+            </div>
+
+            {/* IMAGE UPLOAD - Optional */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: "clamp(8px, 2vw, 12px)",
+              }}
+            >
+              <label
+                style={{
+                  color: colors.text,
+                  fontWeight: 700,
+                  fontSize: "clamp(12px, 2.5vw, 14px)",
+                }}
+              >
+                Attach Screenshots (Optional - Max 5 images)
+              </label>
+
+              {/* Drag and Drop Area */}
+              <div
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                style={{
+                  position: "relative",
+                  padding: "clamp(20px, 6vw, 32px) clamp(16px, 4vw, 20px)",
+                  borderRadius: "clamp(12px, 3vw, 18px)",
+                  border: `2px dashed ${dragActive ? colors.primary : colors.border}`,
+                  background: dragActive
+                    ? colors.primary + "15"
+                    : isDark
+                      ? "rgba(255,255,255,0.03)"
+                      : "#fafafa",
+                  cursor: "pointer",
+                  transition: "all 0.2s ease",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: "clamp(8px, 2vw, 12px)",
+                  minHeight: "clamp(120px, 25vw, 160px)",
+                }}
+              >
+                <input
+                  type="file"
+                  multiple
+                  accept="image/*"
+                  onChange={(e) => handleFileChange(e.target.files)}
+                  disabled={uploadingImages}
+                  style={{
+                    position: "absolute",
+                    width: "100%",
+                    height: "100%",
+                    opacity: 0,
+                    cursor: uploadingImages ? "not-allowed" : "pointer",
+                  }}
+                />
+
+                <div
+                  style={{
+                    width: "clamp(40px, 8vw, 52px)",
+                    height: "clamp(40px, 8vw, 52px)",
+                    borderRadius: "clamp(10px, 2vw, 14px)",
+                    background: "linear-gradient(135deg,#3b82f6,#8b5cf6)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 8px 16px rgba(59,130,246,0.3)",
+                    flexShrink: 0,
+                  }}
+                >
+                  <svg
+                    width="clamp(20px, 5vw, 28px)"
+                    height="clamp(20px, 5vw, 28px)"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="white"
+                    strokeWidth="2"
+                  >
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <path d="m21 15-5-5L5 21" />
+                  </svg>
+                </div>
+
+                <div style={{ textAlign: "center" }}>
+                  <p
+                    style={{
+                      margin: "0 0 clamp(2px, 1vw, 4px) 0",
+                      color: colors.text,
+                      fontWeight: 600,
+                      fontSize: "clamp(13px, 2.5vw, 15px)",
+                    }}
+                  >
+                    {uploadingImages
+                      ? "Uploading images..."
+                      : dragActive
+                        ? "Drop images here"
+                        : "Drag & drop images"}
+                  </p>
+                  <p
+                    style={{
+                      margin: 0,
+                      color: colors.textLight,
+                      fontSize: "clamp(11px, 2vw, 13px)",
+                    }}
+                  >
+                    {uploadingImages ? "Please wait..." : "or click to browse"}
+                  </p>
+                  <p
+                    style={{
+                      margin: "clamp(4px, 1vw, 6px) 0 0 0",
+                      color: colors.textLight,
+                      fontSize: "clamp(10px, 1.8vw, 12px)",
+                    }}
+                  >
+                    Max 500 KB per image
+                  </p>
+                </div>
+              </div>
+
+              {/* Image Preview - Responsive Grid */}
+              {form.images.length > 0 && (
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns:
+                      "repeat(auto-fill, minmax(clamp(70px, 15vw, 110px), 1fr))",
+                    gap: "clamp(8px, 2vw, 12px)",
+                  }}
+                >
+                  {form.images.map((image, index) => (
+                    <div
+                      key={index}
+                      style={{
+                        position: "relative",
+                        borderRadius: "clamp(8px, 2vw, 12px)",
+                        overflow: "hidden",
+                        aspectRatio: "1",
+                        background: isDark
+                          ? "rgba(255,255,255,0.05)"
+                          : "#f0f0f0",
+                        border: `1px solid ${colors.border}`,
+                      }}
+                    >
+                      <img
+                        src={image}
+                        alt={`Preview ${index + 1}`}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => removeImage(index)}
+                        style={{
+                          position: "absolute",
+                          top: "clamp(2px, 1vw, 4px)",
+                          right: "clamp(2px, 1vw, 4px)",
+                          width: "clamp(24px, 5vw, 32px)",
+                          height: "clamp(24px, 5vw, 32px)",
+                          borderRadius: "50%",
+                          background: "rgba(0,0,0,0.7)",
+                          border: "none",
+                          color: "white",
+                          cursor: "pointer",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "clamp(16px, 4vw, 20px)",
+                          transition: "all 0.2s ease",
+                          hover: {
+                            background: "rgba(0,0,0,0.9)",
+                          },
+                        }}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Image Count Info */}
+              {form.images.length > 0 && (
+                <p
+                  style={{
+                    margin: 0,
+                    color: colors.textLight,
+                    fontSize: "clamp(11px, 2vw, 12px)",
+                  }}
+                >
+                  {form.images.length} of 5 images uploaded
+                </p>
+              )}
+
+              {/* Error Message */}
+              {errors.images && (
+                <p
+                  style={{
+                    margin: 0,
+                    color: "#ef4444",
+                    fontSize: "clamp(12px, 2vw, 13px)",
+                  }}
+                >
+                  {errors.images}
+                </p>
+              )}
             </div>
 
             {/* SUBMIT */}
