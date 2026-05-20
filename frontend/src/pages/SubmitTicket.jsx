@@ -1297,7 +1297,7 @@ export default function SubmitTicket() {
               width: "100%",
               height: "100%",
               objectFit: "cover",
-              filter: "brightness(0.55)",
+              filter: "brightness(0.95)",
             }}
           />
 
