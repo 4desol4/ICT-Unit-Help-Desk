@@ -39,15 +39,16 @@ export default function UserLogin() {
     setError("");
 
     try {
-      const data = await userLogin(form);
+      const response = await userLogin(form);
+      const userData = response.data || response;
 
       login(
         {
-          id: data.id,
-          oracleNumber: data.oracleNumber,
+          id: userData.id,
+          oracleNumber: userData.oracleNumber,
           role: "user",
         },
-        data.token,
+        userData.token,
       );
 
       navigate("/");

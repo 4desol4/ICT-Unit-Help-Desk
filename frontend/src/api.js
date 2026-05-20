@@ -7,21 +7,59 @@ const baseURL =
     ? "/api" // Use Vite proxy in dev
     : "https://ict-unit-help-desk.onrender.com/api"; // Use full URL in production
 
-const api = axios.create({ baseURL });
+const api = axios.create({
+  baseURL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+});
 
 // ─── Auth token helpers ───────────────────
-export const setToken = (token) => localStorage.setItem("ict_token", token);
+export const setToken = (token) => {
+  if (token) {
+    localStorage.setItem("ict_token", token);
+    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+  }
+};
 
 export const getToken = () => localStorage.getItem("ict_token");
 
-export const clearToken = () => localStorage.removeItem("ict_token");
+export const clearToken = () => {
+  localStorage.removeItem("ict_token");
+  delete api.defaults.headers.common["Authorization"];
+};
+
+// Initialize token if it exists in localStorage
+const existingToken = getToken();
+if (existingToken) {
+  api.defaults.headers.common["Authorization"] = `Bearer ${existingToken}`;
+}
 
 // Attach token to every request automatically
-api.interceptors.request.use((config) => {
-  const token = getToken();
-  if (token) config.headers.Authorization = `Bearer ${token}`;
-  return config;
-});
+api.interceptors.request.use(
+  (config) => {
+    const token = getToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  },
+);
+
+// Handle response errors
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      clearToken();
+      window.location.href = "/user/login";
+    }
+    return Promise.reject(error);
+  },
+);
 
 // ─── Tickets ──────────────────────────────
 export const submitTicket = (data) => api.post("/tickets", data);

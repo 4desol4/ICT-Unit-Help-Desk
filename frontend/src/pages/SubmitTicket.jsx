@@ -52,7 +52,6 @@ const PRIORITIES = [
   },
 ];
 
-
 function PastTicketsPanel({ tickets, onSelectTicket }) {
   const [filter, setFilter] = useState("open");
   const navigate = useNavigate();
@@ -69,9 +68,7 @@ function PastTicketsPanel({ tickets, onSelectTicket }) {
   return (
     <div
       style={{
-        background: isDark
-          ? "rgba(15,23,42,0.78)"
-          : "rgba(255,255,255,0.92)",
+        background: isDark ? "rgba(15,23,42,0.78)" : "rgba(255,255,255,0.92)",
 
         backdropFilter: "blur(18px)",
         WebkitBackdropFilter: "blur(18px)",
@@ -80,9 +77,7 @@ function PastTicketsPanel({ tickets, onSelectTicket }) {
 
         padding: 22,
 
-        border: `1px solid ${
-          isDark ? "rgba(255,255,255,0.06)" : "#e2e8f0"
-        }`,
+        border: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "#e2e8f0"}`,
 
         position: "sticky",
         top: 90,
@@ -132,13 +127,11 @@ function PastTicketsPanel({ tickets, onSelectTicket }) {
               width: 46,
               height: 46,
               borderRadius: 16,
-              background:
-                "linear-gradient(135deg,#6366f1,#8b5cf6)",
+              background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              boxShadow:
-                "0 10px 25px rgba(99,102,241,0.35)",
+              boxShadow: "0 10px 25px rgba(99,102,241,0.35)",
             }}
           >
             <Clipboard size={20} color="#fff" />
@@ -172,9 +165,7 @@ function PastTicketsPanel({ tickets, onSelectTicket }) {
           style={{
             padding: "7px 12px",
             borderRadius: 999,
-            background: isDark
-              ? "rgba(99,102,241,0.15)"
-              : "#eef2ff",
+            background: isDark ? "rgba(99,102,241,0.15)" : "#eef2ff",
 
             color: "#6366f1",
             fontSize: 12,
@@ -218,10 +209,7 @@ function PastTicketsPanel({ tickets, onSelectTicket }) {
                     ? "rgba(255,255,255,0.03)"
                     : "#f8fafc",
 
-              color:
-                filter === tab.key
-                  ? "#fff"
-                  : colors.textSecondary,
+              color: filter === tab.key ? "#fff" : colors.textSecondary,
 
               fontWeight: 700,
               cursor: "pointer",
@@ -248,23 +236,18 @@ function PastTicketsPanel({ tickets, onSelectTicket }) {
           <div
             style={{
               textAlign: "center",
-              justifyContent: "center", 
+              justifyContent: "center",
               display: "flex",
               alignItems: "center",
               flexDirection: "column",
               padding: "32px 10px",
               borderRadius: 20,
-              background: isDark
-                ? "rgba(255,255,255,0.03)"
-                : "#f8fafc",
+              background: isDark ? "rgba(255,255,255,0.03)" : "#f8fafc",
 
               border: `1px dashed ${colors.border}`,
             }}
           >
-            <Clipboard
-              size={40}
-              color={isDark ? "#475569" : "#cbd5e1"}
-            />
+            <Clipboard size={40} color={isDark ? "#475569" : "#cbd5e1"} />
 
             <p
               style={{
@@ -284,9 +267,7 @@ function PastTicketsPanel({ tickets, onSelectTicket }) {
                 padding: 16,
                 borderRadius: 18,
 
-                background: isDark
-                  ? "rgba(255,255,255,0.03)"
-                  : "#fff",
+                background: isDark ? "rgba(255,255,255,0.03)" : "#fff",
 
                 border: `1px solid ${colors.border}`,
 
@@ -336,10 +317,7 @@ function PastTicketsPanel({ tickets, onSelectTicket }) {
                         ? "rgba(34,197,94,0.12)"
                         : "rgba(59,130,246,0.12)",
 
-                    color:
-                      ticket.status === "resolved"
-                        ? "#16a34a"
-                        : "#2563eb",
+                    color: ticket.status === "resolved" ? "#16a34a" : "#2563eb",
 
                     display: "flex",
                     alignItems: "center",
@@ -389,9 +367,7 @@ function PastTicketsPanel({ tickets, onSelectTicket }) {
                     padding: "10px 12px",
                     borderRadius: 12,
                     border: `1px solid ${colors.border}`,
-                    background: isDark
-                      ? "rgba(255,255,255,0.03)"
-                      : "#f8fafc",
+                    background: isDark ? "rgba(255,255,255,0.03)" : "#f8fafc",
 
                     color: colors.text,
                     cursor: "pointer",
@@ -407,17 +383,14 @@ function PastTicketsPanel({ tickets, onSelectTicket }) {
                 </button>
 
                 <button
-                  onClick={() =>
-                    navigate(`/ticket/${ticket.id}`)
-                  }
+                  onClick={() => navigate(`/ticket/${ticket.id}`)}
                   style={{
                     flex: 1,
                     minWidth: 120,
                     padding: "10px 12px",
                     borderRadius: 12,
                     border: "none",
-                    background:
-                      "linear-gradient(135deg,#6366f1,#8b5cf6)",
+                    background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
 
                     color: "#fff",
                     cursor: "pointer",
@@ -427,8 +400,7 @@ function PastTicketsPanel({ tickets, onSelectTicket }) {
                     alignItems: "center",
                     gap: 8,
 
-                    boxShadow:
-                      "0 10px 20px rgba(99,102,241,0.25)",
+                    boxShadow: "0 10px 20px rgba(99,102,241,0.25)",
                   }}
                 >
                   <MessageCircle size={14} />
@@ -453,9 +425,7 @@ function PastTicketsPanel({ tickets, onSelectTicket }) {
 
             border: `1px solid ${colors.border}`,
 
-            background: isDark
-              ? "rgba(255,255,255,0.04)"
-              : "#f8fafc",
+            background: isDark ? "rgba(255,255,255,0.04)" : "#f8fafc",
 
             color: colors.text,
 
@@ -498,8 +468,7 @@ export default function SubmitTicket() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [pastTickets, setPastTickets] = useState([]);
-  const [selectedTicketId, setSelectedTicketId] =
-    useState(null);
+  const [selectedTicketId, setSelectedTicketId] = useState(null);
 
   useEffect(() => {
     if (!user || user.role !== "user") {
@@ -534,21 +503,16 @@ export default function SubmitTicket() {
   const validate = () => {
     const e = {};
 
-    if (!form.name.trim())
-      e.name = "Please enter your name";
+    if (!form.name.trim()) e.name = "Please enter your name";
 
-    if (!form.department)
-      e.department = "Please select department";
+    if (!form.department) e.department = "Please select department";
 
-    if (!form.location.trim())
-      e.location = "Please enter your location";
+    if (!form.location.trim()) e.location = "Please enter your location";
 
     if (form.problem.length < 10)
-      e.problem =
-        "Please describe the problem properly";
+      e.problem = "Please describe the problem properly";
 
-    if (!form.priority)
-      e.priority = "Please select priority";
+    if (!form.priority) e.priority = "Please select priority";
 
     return e;
   };
@@ -578,330 +542,261 @@ export default function SubmitTicket() {
 
       loadPastTickets();
     } catch (err) {
+      console.error("Submit ticket error:", err);
+      const errorMsg =
+        err.response?.data?.error ||
+        (err.response?.status === 401
+          ? "Unauthorized - please login again"
+          : "Something went wrong. Please try again.");
       setErrors({
-        submit:
-          "Something went wrong. Please try again.",
+        submit: errorMsg,
       });
     } finally {
       setLoading(false);
     }
   };
-if (selectedTicketId) {
-  const ticket = pastTickets.find((t) => t.id === selectedTicketId);
+  if (selectedTicketId) {
+    const ticket = pastTickets.find((t) => t.id === selectedTicketId);
 
-  if (!ticket) return null;
+    if (!ticket) return null;
 
-  return (
-    <div
-      style={{
-        minHeight: "100vh",
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
 
-        background: isDark
-          ? `
+          background: isDark
+            ? `
             radial-gradient(circle at top right, rgba(99,102,241,0.14), transparent 26%),
             radial-gradient(circle at bottom left, rgba(168,85,247,0.12), transparent 24%),
             #020617
           `
-          : "#f8fafc",
+            : "#f8fafc",
 
-        padding: "32px 16px",
-      }}
-    >
-      <div
-        style={{
-          maxWidth: 760,
-          margin: "0 auto",
+          padding: "32px 16px",
         }}
       >
-        {/* BACK BUTTON */}
-        <button
-          onClick={() => setSelectedTicketId(null)}
-          style={{
-            background: isDark
-              ? "rgba(15,23,42,0.82)"
-              : "#ffffff",
-
-            border: `1px solid ${
-              isDark ? "rgba(255,255,255,0.06)" : "#e2e8f0"
-            }`,
-
-            color: colors.text,
-
-            padding: "12px 18px",
-
-            borderRadius: 16,
-
-            cursor: "pointer",
-
-            marginBottom: 24,
-
-            fontWeight: 700,
-
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-
-            backdropFilter: "blur(14px)",
-
-            boxShadow: isDark
-              ? "0 10px 30px rgba(0,0,0,0.28)"
-              : "0 10px 30px rgba(0,0,0,0.05)",
-          }}
-        >
-          <ArrowLeft size={16} />
-          Back to Submit Ticket
-        </button>
-
-        {/* MAIN CARD */}
         <div
           style={{
-            background: isDark
-              ? "rgba(15,23,42,0.82)"
-              : "#ffffff",
-
-            borderRadius: 30,
-
-            padding: 30,
-
-            border: `1px solid ${
-              isDark ? "rgba(255,255,255,0.06)" : "#e2e8f0"
-            }`,
-
-            backdropFilter: "blur(14px)",
-
-            boxShadow: isDark
-              ? "0 20px 50px rgba(0,0,0,0.45)"
-              : "0 20px 40px rgba(0,0,0,0.05)",
+            maxWidth: 760,
+            margin: "0 auto",
           }}
         >
-          {/* TOP */}
-          <div
+          {/* BACK BUTTON */}
+          <button
+            onClick={() => setSelectedTicketId(null)}
             style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "flex-start",
-              gap: 20,
-              marginBottom: 28,
-              flexWrap: "wrap",
-            }}
-          >
-            <div>
-              <h1
-                style={{
-                  fontSize: "clamp(1.8rem,4vw,2.3rem)",
-                  fontWeight: 900,
-                  color: colors.text,
-                  marginBottom: 10,
-                }}
-              >
-                Ticket #{ticket.id}
-              </h1>
-
-              <p
-                style={{
-                  color: colors.textSecondary,
-                  fontSize: 14,
-                }}
-              >
-                Track your support request and communicate with the ICT team.
-              </p>
-            </div>
-
-            {/* STATUS */}
-            <span
-              style={{
-                padding: "10px 16px",
-
-                borderRadius: 999,
-
-                fontSize: 12,
-                fontWeight: 700,
-
-                background:
-                  ticket.status === "resolved"
-                    ? "rgba(16,185,129,0.14)"
-                    : ticket.status === "in_progress"
-                      ? "rgba(245,158,11,0.14)"
-                      : "rgba(59,130,246,0.14)",
-
-                color:
-                  ticket.status === "resolved"
-                    ? "#10b981"
-                    : ticket.status === "in_progress"
-                      ? "#f59e0b"
-                      : "#3b82f6",
-
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-
-                border:
-                  ticket.status === "resolved"
-                    ? "1px solid rgba(16,185,129,0.2)"
-                    : ticket.status === "in_progress"
-                      ? "1px solid rgba(245,158,11,0.2)"
-                      : "1px solid rgba(59,130,246,0.2)",
-              }}
-            >
-              {ticket.status === "resolved" ? (
-                <>
-                  <CheckCircle2 size={14} />
-                  Resolved
-                </>
-              ) : ticket.status === "in_progress" ? (
-                <>
-                  <Zap size={14} />
-                  In Progress
-                </>
-              ) : (
-                <>
-                  <Circle size={14} />
-                  Open
-                </>
-              )}
-            </span>
-          </div>
-
-          {/* DETAILS GRID */}
-          <div
-            style={{
-              background: isDark
-                ? "rgba(2,6,23,0.5)"
-                : "#f8fafc",
-
-              borderRadius: 24,
-
-              padding: 22,
-
-              marginBottom: 28,
-
-              display: "grid",
-
-              gridTemplateColumns:
-                "repeat(auto-fit,minmax(180px,1fr))",
-
-              gap: 18,
+              background: isDark ? "rgba(15,23,42,0.82)" : "#ffffff",
 
               border: `1px solid ${
-                isDark ? "rgba(255,255,255,0.04)" : "#e2e8f0"
+                isDark ? "rgba(255,255,255,0.06)" : "#e2e8f0"
               }`,
+
+              color: colors.text,
+
+              padding: "12px 18px",
+
+              borderRadius: 16,
+
+              cursor: "pointer",
+
+              marginBottom: 24,
+
+              fontWeight: 700,
+
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+
+              backdropFilter: "blur(14px)",
+
+              boxShadow: isDark
+                ? "0 10px 30px rgba(0,0,0,0.28)"
+                : "0 10px 30px rgba(0,0,0,0.05)",
             }}
           >
-            {[
-              {
-                label: "Department",
-                value: ticket.department,
-              },
-              {
-                label: "Location",
-                value: ticket.location,
-              },
-              {
-                label: "Priority",
-                value: ticket.priority,
-              },
-              {
-                label: "Created",
-                value: new Date(
-                  ticket.createdAt,
-                ).toLocaleDateString("en-GB"),
-              },
-            ].map((item, idx) => (
-              <div key={idx}>
-                <div
-                  style={{
-                    color: colors.textSecondary,
-                    fontSize: 12,
-                    marginBottom: 6,
-                    fontWeight: 600,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                  }}
-                >
-                  {item.label}
-                </div>
+            <ArrowLeft size={16} />
+            Back to Submit Ticket
+          </button>
 
-                <div
-                  style={{
-                    color: colors.text,
-                    fontWeight: 700,
-                    fontSize: 15,
-                  }}
-                >
-                  {item.value}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* PROBLEM */}
+          {/* MAIN CARD */}
           <div
             style={{
-              marginBottom: 28,
+              background: isDark ? "rgba(15,23,42,0.82)" : "#ffffff",
+
+              borderRadius: 30,
+
+              padding: 30,
+
+              border: `1px solid ${
+                isDark ? "rgba(255,255,255,0.06)" : "#e2e8f0"
+              }`,
+
+              backdropFilter: "blur(14px)",
+
+              boxShadow: isDark
+                ? "0 20px 50px rgba(0,0,0,0.45)"
+                : "0 20px 40px rgba(0,0,0,0.05)",
             }}
           >
-            <h3
-              style={{
-                fontSize: 15,
-                fontWeight: 800,
-                marginBottom: 14,
-                color: colors.text,
-
-                display: "flex",
-                alignItems: "center",
-                gap: 10,
-              }}
-            >
-              <MessageCircle size={18} />
-              Problem Description
-            </h3>
-
+            {/* TOP */}
             <div
               style={{
-                background: isDark
-                  ? "rgba(2,6,23,0.5)"
-                  : "#f8fafc",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 20,
+                marginBottom: 28,
+                flexWrap: "wrap",
+              }}
+            >
+              <div>
+                <h1
+                  style={{
+                    fontSize: "clamp(1.8rem,4vw,2.3rem)",
+                    fontWeight: 900,
+                    color: colors.text,
+                    marginBottom: 10,
+                  }}
+                >
+                  Ticket #{ticket.id}
+                </h1>
 
-                borderRadius: 20,
+                <p
+                  style={{
+                    color: colors.textSecondary,
+                    fontSize: 14,
+                  }}
+                >
+                  Track your support request and communicate with the ICT team.
+                </p>
+              </div>
+
+              {/* STATUS */}
+              <span
+                style={{
+                  padding: "10px 16px",
+
+                  borderRadius: 999,
+
+                  fontSize: 12,
+                  fontWeight: 700,
+
+                  background:
+                    ticket.status === "resolved"
+                      ? "rgba(16,185,129,0.14)"
+                      : ticket.status === "in_progress"
+                        ? "rgba(245,158,11,0.14)"
+                        : "rgba(59,130,246,0.14)",
+
+                  color:
+                    ticket.status === "resolved"
+                      ? "#10b981"
+                      : ticket.status === "in_progress"
+                        ? "#f59e0b"
+                        : "#3b82f6",
+
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+
+                  border:
+                    ticket.status === "resolved"
+                      ? "1px solid rgba(16,185,129,0.2)"
+                      : ticket.status === "in_progress"
+                        ? "1px solid rgba(245,158,11,0.2)"
+                        : "1px solid rgba(59,130,246,0.2)",
+                }}
+              >
+                {ticket.status === "resolved" ? (
+                  <>
+                    <CheckCircle2 size={14} />
+                    Resolved
+                  </>
+                ) : ticket.status === "in_progress" ? (
+                  <>
+                    <Zap size={14} />
+                    In Progress
+                  </>
+                ) : (
+                  <>
+                    <Circle size={14} />
+                    Open
+                  </>
+                )}
+              </span>
+            </div>
+
+            {/* DETAILS GRID */}
+            <div
+              style={{
+                background: isDark ? "rgba(2,6,23,0.5)" : "#f8fafc",
+
+                borderRadius: 24,
 
                 padding: 22,
+
+                marginBottom: 28,
+
+                display: "grid",
+
+                gridTemplateColumns: "repeat(auto-fit,minmax(180px,1fr))",
+
+                gap: 18,
 
                 border: `1px solid ${
                   isDark ? "rgba(255,255,255,0.04)" : "#e2e8f0"
                 }`,
               }}
             >
-              <p
-                style={{
-                  color: colors.text,
-                  lineHeight: 1.8,
-                  margin: 0,
-                  fontSize: 15,
-                }}
-              >
-                {ticket.problem}
-              </p>
-            </div>
-          </div>
+              {[
+                {
+                  label: "Department",
+                  value: ticket.department,
+                },
+                {
+                  label: "Location",
+                  value: ticket.location,
+                },
+                {
+                  label: "Priority",
+                  value: ticket.priority,
+                },
+                {
+                  label: "Created",
+                  value: new Date(ticket.createdAt).toLocaleDateString("en-GB"),
+                },
+              ].map((item, idx) => (
+                <div key={idx}>
+                  <div
+                    style={{
+                      color: colors.textSecondary,
+                      fontSize: 12,
+                      marginBottom: 6,
+                      fontWeight: 600,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    {item.label}
+                  </div>
 
-          {/* RESOLUTION */}
-          {ticket.resolution && (
+                  <div
+                    style={{
+                      color: colors.text,
+                      fontWeight: 700,
+                      fontSize: 15,
+                    }}
+                  >
+                    {item.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* PROBLEM */}
             <div
               style={{
-                background: isDark
-                  ? "rgba(16,185,129,0.08)"
-                  : "#ecfdf5",
-
-                borderRadius: 24,
-
-                padding: 22,
-
-                border: `1px solid ${
-                  isDark
-                    ? "rgba(16,185,129,0.18)"
-                    : "#bbf7d0"
-                }`,
-
                 marginBottom: 28,
               }}
             >
@@ -909,71 +804,128 @@ if (selectedTicketId) {
                 style={{
                   fontSize: 15,
                   fontWeight: 800,
-                  marginBottom: 12,
-                  color: "#10b981",
+                  marginBottom: 14,
+                  color: colors.text,
 
                   display: "flex",
                   alignItems: "center",
                   gap: 10,
                 }}
               >
-                <CheckCircle2 size={18} />
-                Resolution
+                <MessageCircle size={18} />
+                Problem Description
               </h3>
 
-              <p
+              <div
                 style={{
-                  color: isDark ? "#d1fae5" : "#166534",
-                  margin: 0,
-                  lineHeight: 1.8,
-                  fontSize: 15,
+                  background: isDark ? "rgba(2,6,23,0.5)" : "#f8fafc",
+
+                  borderRadius: 20,
+
+                  padding: 22,
+
+                  border: `1px solid ${
+                    isDark ? "rgba(255,255,255,0.04)" : "#e2e8f0"
+                  }`,
                 }}
               >
-                {ticket.resolution}
-              </p>
+                <p
+                  style={{
+                    color: colors.text,
+                    lineHeight: 1.8,
+                    margin: 0,
+                    fontSize: 15,
+                  }}
+                >
+                  {ticket.problem}
+                </p>
+              </div>
             </div>
-          )}
 
-          {/* BUTTON */}
-          <button
-            onClick={() => navigate(`/ticket/${ticket.id}`)}
-            style={{
-              width: "100%",
+            {/* RESOLUTION */}
+            {ticket.resolution && (
+              <div
+                style={{
+                  background: isDark ? "rgba(16,185,129,0.08)" : "#ecfdf5",
 
-              background:
-                "linear-gradient(135deg,#6366f1,#8b5cf6)",
+                  borderRadius: 24,
 
-              color: "#fff",
+                  padding: 22,
 
-              padding: "16px 20px",
+                  border: `1px solid ${
+                    isDark ? "rgba(16,185,129,0.18)" : "#bbf7d0"
+                  }`,
 
-              borderRadius: 18,
+                  marginBottom: 28,
+                }}
+              >
+                <h3
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 800,
+                    marginBottom: 12,
+                    color: "#10b981",
 
-              border: "none",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                  }}
+                >
+                  <CheckCircle2 size={18} />
+                  Resolution
+                </h3>
 
-              fontWeight: 700,
+                <p
+                  style={{
+                    color: isDark ? "#d1fae5" : "#166534",
+                    margin: 0,
+                    lineHeight: 1.8,
+                    fontSize: 15,
+                  }}
+                >
+                  {ticket.resolution}
+                </p>
+              </div>
+            )}
 
-              fontSize: 15,
+            {/* BUTTON */}
+            <button
+              onClick={() => navigate(`/ticket/${ticket.id}`)}
+              style={{
+                width: "100%",
 
-              cursor: "pointer",
+                background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
 
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 10,
+                color: "#fff",
 
-              boxShadow:
-                "0 10px 30px rgba(99,102,241,0.35)",
-            }}
-          >
-            <MessageCircle size={18} />
-            Open Conversation
-          </button>
+                padding: "16px 20px",
+
+                borderRadius: 18,
+
+                border: "none",
+
+                fontWeight: 700,
+
+                fontSize: 15,
+
+                cursor: "pointer",
+
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 10,
+
+                boxShadow: "0 10px 30px rgba(99,102,241,0.35)",
+              }}
+            >
+              <MessageCircle size={18} />
+              Open Conversation
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  );
-}
+    );
+  }
 
   // Success screen
   if (success) {
@@ -1211,8 +1163,7 @@ if (selectedTicketId) {
 
             marginBottom: 28,
 
-            boxShadow:
-              "0 25px 60px rgba(0,0,0,0.25)",
+            boxShadow: "0 25px 60px rgba(0,0,0,0.25)",
           }}
         >
           {/* IMAGE */}
@@ -1257,8 +1208,7 @@ if (selectedTicketId) {
               filter: "blur(120px)",
               top: -80,
               right: -60,
-              animation:
-                "pulseGlow 4s ease infinite",
+              animation: "pulseGlow 4s ease infinite",
             }}
           />
 
@@ -1272,8 +1222,7 @@ if (selectedTicketId) {
               filter: "blur(100px)",
               bottom: -60,
               left: -40,
-              animation:
-                "pulseGlow 5s ease infinite",
+              animation: "pulseGlow 5s ease infinite",
             }}
           />
 
@@ -1303,13 +1252,11 @@ if (selectedTicketId) {
                 height: 82,
                 borderRadius: 24,
 
-                background:
-                  "rgba(255,255,255,0.12)",
+                background: "rgba(255,255,255,0.12)",
 
                 backdropFilter: "blur(14px)",
 
-                border:
-                  "1px solid rgba(255,255,255,0.14)",
+                border: "1px solid rgba(255,255,255,0.14)",
 
                 display: "flex",
                 alignItems: "center",
@@ -1317,15 +1264,10 @@ if (selectedTicketId) {
 
                 marginBottom: 24,
 
-                boxShadow:
-                  "0 15px 40px rgba(0,0,0,0.25)",
+                boxShadow: "0 15px 40px rgba(0,0,0,0.25)",
               }}
             >
-              <Wrench
-                size={40}
-                color="#fff"
-                strokeWidth={1.8}
-              />
+              <Wrench size={40} color="#fff" strokeWidth={1.8} />
             </div>
 
             {/* TITLE */}
@@ -1342,18 +1284,14 @@ if (selectedTicketId) {
             >
               Ministry of Basic &
               <br />
-
               <span
                 style={{
-                  background:
-                    "linear-gradient(90deg,#c4b5fd,#ffffff,#93c5fd)",
+                  background: "linear-gradient(90deg,#c4b5fd,#ffffff,#93c5fd)",
 
                   WebkitBackgroundClip: "text",
-                  WebkitTextFillColor:
-                    "transparent",
+                  WebkitTextFillColor: "transparent",
 
-                  textShadow:
-                    "0 0 25px rgba(255,255,255,0.12)",
+                  textShadow: "0 0 25px rgba(255,255,255,0.12)",
                 }}
               >
                 Secondary Education
@@ -1372,10 +1310,8 @@ if (selectedTicketId) {
                 marginBottom: 26,
               }}
             >
-              Submit technical issues, track
-              support progress, and communicate
-              directly with the ICT support team
-              in real-time.
+              Submit technical issues, track support progress, and communicate
+              directly with the ICT support team in real-time.
             </p>
 
             {/* BADGES */}
@@ -1387,32 +1323,28 @@ if (selectedTicketId) {
                 flexWrap: "wrap",
               }}
             >
-              {[
-                "Fast Response",
-                "Real-time Updates",
-                "Live Ticket Chat",
-              ].map((item) => (
-                <div
-                  key={item}
-                  style={{
-                    padding: "10px 18px",
-                    borderRadius: 999,
+              {["Fast Response", "Real-time Updates", "Live Ticket Chat"].map(
+                (item) => (
+                  <div
+                    key={item}
+                    style={{
+                      padding: "10px 18px",
+                      borderRadius: 999,
 
-                    background:
-                      "rgba(255,255,255,0.1)",
+                      background: "rgba(255,255,255,0.1)",
 
-                    backdropFilter: "blur(12px)",
+                      backdropFilter: "blur(12px)",
 
-                    border:
-                      "1px solid rgba(255,255,255,0.14)",
+                      border: "1px solid rgba(255,255,255,0.14)",
 
-                    fontSize: 13,
-                    fontWeight: 700,
-                  }}
-                >
-                  {item}
-                </div>
-              ))}
+                      fontSize: 13,
+                      fontWeight: 700,
+                    }}
+                  >
+                    {item}
+                  </div>
+                ),
+              )}
             </div>
           </div>
         </div>
@@ -1442,9 +1374,7 @@ if (selectedTicketId) {
               padding: "clamp(20px,3vw,34px)",
 
               border: `1px solid ${
-                isDark
-                  ? "rgba(255,255,255,0.06)"
-                  : "#e2e8f0"
+                isDark ? "rgba(255,255,255,0.06)" : "#e2e8f0"
               }`,
 
               boxShadow: isDark
@@ -1470,22 +1400,16 @@ if (selectedTicketId) {
                 type="text"
                 value={form.name}
                 placeholder="e.g. Amina Yusuf"
-                onChange={(e) =>
-                  update("name", e.target.value)
-                }
+                onChange={(e) => update("name", e.target.value)}
                 style={{
                   width: "100%",
                   padding: "15px 16px",
                   borderRadius: 16,
                   border: `1.5px solid ${
-                    errors.name
-                      ? "#ef4444"
-                      : colors.border
+                    errors.name ? "#ef4444" : colors.border
                   }`,
 
-                  background: isDark
-                    ? "rgb(15,23,42)"
-                    : "#fff",
+                  background: isDark ? "rgb(15,23,42)" : "#fff",
 
                   color: colors.text,
                   fontSize: 14,
@@ -1531,31 +1455,20 @@ if (selectedTicketId) {
 
                 <select
                   value={form.department}
-                  onChange={(e) =>
-                    update(
-                      "department",
-                      e.target.value,
-                    )
-                  }
+                  onChange={(e) => update("department", e.target.value)}
                   style={{
                     width: "100%",
                     padding: "15px 16px",
                     borderRadius: 16,
                     border: `1.5px solid ${
-                      errors.department
-                        ? "#ef4444"
-                        : colors.border
+                      errors.department ? "#ef4444" : colors.border
                     }`,
-                    background: isDark
-                      ? "rgb(15,23,42)"
-                      : "#fff",
+                    background: isDark ? "rgb(15,23,42)" : "#fff",
                     color: colors.text,
                     fontSize: 14,
                   }}
                 >
-                  <option value="">
-                    Select department
-                  </option>
+                  <option value="">Select department</option>
 
                   {DEPARTMENTS.map((d) => (
                     <option key={d} value={d}>
@@ -1583,24 +1496,15 @@ if (selectedTicketId) {
                   type="text"
                   value={form.location}
                   placeholder="e.g. Room 204"
-                  onChange={(e) =>
-                    update(
-                      "location",
-                      e.target.value,
-                    )
-                  }
+                  onChange={(e) => update("location", e.target.value)}
                   style={{
                     width: "100%",
                     padding: "15px 16px",
                     borderRadius: 16,
                     border: `1.5px solid ${
-                      errors.location
-                        ? "#ef4444"
-                        : colors.border
+                      errors.location ? "#ef4444" : colors.border
                     }`,
-                    background: isDark
-                      ? "rgb(15,23,42)"
-                      : "#fff",
+                    background: isDark ? "rgb(15,23,42)" : "#fff",
                     color: colors.text,
                     fontSize: 14,
                   }}
@@ -1626,21 +1530,15 @@ if (selectedTicketId) {
                 rows={5}
                 value={form.problem}
                 placeholder="Explain the issue clearly..."
-                onChange={(e) =>
-                  update("problem", e.target.value)
-                }
+                onChange={(e) => update("problem", e.target.value)}
                 style={{
                   width: "100%",
                   padding: "15px 16px",
                   borderRadius: 16,
                   border: `1.5px solid ${
-                    errors.problem
-                      ? "#ef4444"
-                      : colors.border
+                    errors.problem ? "#ef4444" : colors.border
                   }`,
-                  background: isDark
-                    ? "rgb(15,23,42)"
-                    : "#fff",
+                  background: isDark ? "rgb(15,23,42)" : "#fff",
                   color: colors.text,
                   resize: "vertical",
                   fontSize: 14,
@@ -1680,8 +1578,7 @@ if (selectedTicketId) {
                 }}
               >
                 {PRIORITIES.map((p) => {
-                  const active =
-                    form.priority === p.value;
+                  const active = form.priority === p.value;
 
                   return (
                     <label
@@ -1695,11 +1592,7 @@ if (selectedTicketId) {
 
                         borderRadius: 18,
 
-                        border: `2px solid ${
-                          active
-                            ? p.color
-                            : colors.border
-                        }`,
+                        border: `2px solid ${active ? p.color : colors.border}`,
 
                         background: active
                           ? p.color + "15"
@@ -1713,12 +1606,7 @@ if (selectedTicketId) {
                       <input
                         type="radio"
                         checked={active}
-                        onChange={() =>
-                          update(
-                            "priority",
-                            p.value,
-                          )
-                        }
+                        onChange={() => update("priority", p.value)}
                       />
 
                       <div
@@ -1758,25 +1646,21 @@ if (selectedTicketId) {
 
                 border: "none",
 
-                background:
-                  "linear-gradient(135deg,#6366f1,#8b5cf6)",
+                background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
 
                 color: "#fff",
 
                 fontSize: 15,
                 fontWeight: 800,
 
-                cursor: loading
-                  ? "not-allowed"
-                  : "pointer",
+                cursor: loading ? "not-allowed" : "pointer",
 
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 10,
 
-                boxShadow:
-                  "0 15px 30px rgba(99,102,241,0.3)",
+                boxShadow: "0 15px 30px rgba(99,102,241,0.3)",
               }}
             >
               {loading ? (
@@ -1784,8 +1668,7 @@ if (selectedTicketId) {
                   <Loader2
                     size={18}
                     style={{
-                      animation:
-                        "spin 1s linear infinite",
+                      animation: "spin 1s linear infinite",
                     }}
                   />
                   Submitting...
@@ -1807,38 +1690,28 @@ if (selectedTicketId) {
 
                 borderRadius: 18,
 
-                background: isDark
-                  ? "rgba(255,255,255,0.03)"
-                  : "#eef2ff",
+                background: isDark ? "rgba(255,255,255,0.03)" : "#eef2ff",
 
                 border: `1px solid ${
-                  isDark
-                    ? "rgba(255,255,255,0.05)"
-                    : "#c7d2fe"
+                  isDark ? "rgba(255,255,255,0.05)" : "#c7d2fe"
                 }`,
 
                 display: "flex",
                 gap: 12,
                 alignItems: "flex-start",
 
-                color: isDark
-                  ? colors.textSecondary
-                  : "#1e40af",
+                color: isDark ? colors.textSecondary : "#1e40af",
 
                 fontSize: 13,
                 lineHeight: 1.7,
               }}
             >
-              <Lightbulb
-                size={18}
-                style={{ flexShrink: 0 }}
-              />
+              <Lightbulb size={18} style={{ flexShrink: 0 }} />
 
               <div>
-                <strong>Tip:</strong> Include
-                screenshots, exact error messages,
-                or what you were doing before the
-                issue happened for faster support.
+                <strong>Tip:</strong> Include screenshots, exact error messages,
+                or what you were doing before the issue happened for faster
+                support.
               </div>
             </div>
           </div>
@@ -1846,9 +1719,7 @@ if (selectedTicketId) {
           {/* SIDEBAR */}
           <PastTicketsPanel
             tickets={pastTickets}
-            onSelectTicket={
-              setSelectedTicketId
-            }
+            onSelectTicket={setSelectedTicketId}
           />
         </div>
       </div>
