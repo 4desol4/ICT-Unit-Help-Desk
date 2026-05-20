@@ -249,7 +249,7 @@ export default function UserLogin() {
               height: "100%",
               objectFit: "cover",
               objectPosition: "center",
-              filter: "brightness(0.58)",
+              filter: "brightness(0.88)",
               transform: "scale(1.04)",
             }}
           />
