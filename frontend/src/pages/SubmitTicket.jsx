@@ -529,7 +529,7 @@ export default function SubmitTicket() {
 
   // Handle file selection with size validation
   const handleFileChange = async (files) => {
-    const MAX_FILE_SIZE = 500 * 1024; // 500 KB in bytes
+    const MAX_FILE_SIZE = 1024 * 1024; // 1 MB in bytes
     const imageFiles = Array.from(files).filter((file) =>
       file.type.startsWith("image/"),
     );
@@ -547,7 +547,7 @@ export default function SubmitTicket() {
       if (file.size > MAX_FILE_SIZE) {
         setErrors((prev) => ({
           ...prev,
-          images: `Image "${file.name}" is too large. Max size: 500 KB`,
+          images: `Image "${file.name}" is too large. Max size: 1 MB`,
         }));
         return;
       }
@@ -1231,7 +1231,7 @@ export default function SubmitTicket() {
           }
 
           .hero-grid{
-            align-items:flex-start !important;
+            align-items:center !important;
           }
 
         }
@@ -1302,19 +1302,36 @@ export default function SubmitTicket() {
           />
 
           {/* OVERLAY */}
+                    <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: `
+        linear-gradient(
+          135deg,
+          rgba(2,6,23,0.22) 0%,
+          rgba(2,6,23,0.18) 40%,
+          rgba(2,6,23,0.10) 100%
+        )
+      `,
+              zIndex: 1,
+            }}
+          />
+
+          {/* BOTTOM OVERLAY */}
           <div
             style={{
               position: "absolute",
               inset: 0,
-
               background: `
-                linear-gradient(
-                  135deg,
-                  rgba(2,6,23,0.12),
-                  rgba(79,70,229,0.05),
-                  rgba(15,23,42,0.12)
-                )
-              `,
+        linear-gradient(
+          to top,
+          rgba(2,6,23,0.38) 0%,
+          rgba(2,6,23,0.35) 35%,
+          transparent 65%
+        )
+      `,
+              zIndex: 1,
             }}
           />
 
@@ -1357,7 +1374,8 @@ export default function SubmitTicket() {
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
-
+              alignItems: "center",
+              textAlign: "center",
               height: "100%",
 
               padding: "clamp(24px,4vw,42px)",
@@ -1367,7 +1385,6 @@ export default function SubmitTicket() {
           >
             {/* ICON */}
             <div
-              className="hero-badge"
               style={{
                 width: 82,
                 height: 82,
@@ -1397,27 +1414,44 @@ export default function SubmitTicket() {
               style={{
                 fontSize: "clamp(2.3rem,5vw,4rem)",
                 fontWeight: 900,
-                lineHeight: 1.05,
-                marginBottom: 18,
-                maxWidth: 850,
-                letterSpacing: "-0.04em",
+                lineHeight: 1.02,
+                marginBottom: 20,
+                maxWidth: 760,
+                letterSpacing: "-0.05em",
+
+                /* MAIN TEXT COLOR */
+                color: "#ffffff",
+
+               
+                position: "relative",
+                zIndex: 2,
               }}
             >
-              Ministry of Basic &
-              <br />
               <span
                 style={{
-                  background: "linear-gradient(90deg,#c4b5fd,#ffffff,#93c5fd)",
+                  display: "block",
+                  marginBottom: 8,
+                }}
+              >
+                MBSE ICT Unit
+              </span>
+
+              <span
+                style={{
+                  display: "block",
+
+                  background:
+                    "linear-gradient(90deg,#c4b5fd 0%, #ffffff 45%, #93c5fd 100%)",
 
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
 
-                  textShadow: "0 0 25px rgba(255,255,255,0.12)",
+                  WebkitFontSmoothing: "antialiased",
+
+                  textShadow: "none",
                 }}
               >
-                Secondary Education
-                <br />
-                ICT Unit Help Desk
+               Help Desk
               </span>
             </h1>
 
@@ -1429,6 +1463,7 @@ export default function SubmitTicket() {
                 lineHeight: 1.8,
                 color: "rgba(255,255,255,0.86)",
                 marginBottom: 26,
+                
               }}
             >
               Submit technical issues, track support progress, and communicate
@@ -1460,6 +1495,7 @@ export default function SubmitTicket() {
 
                       fontSize: 13,
                       fontWeight: 700,
+                      
                     }}
                   >
                     {item}
@@ -1870,7 +1906,7 @@ export default function SubmitTicket() {
                       fontSize: "clamp(10px, 1.8vw, 12px)",
                     }}
                   >
-                    Max 500 KB per image
+                    Max 1 MB per image
                   </p>
                 </div>
               </div>
@@ -1966,7 +2002,7 @@ export default function SubmitTicket() {
                 </p>
               )}
             </div>
-
+            <div style={{ height: 34 }} />
             {/* SUBMIT */}
             <button
               onClick={handleSubmit}

@@ -73,7 +73,11 @@ export default function UserTicketChat() {
   useEffect(() => {
     const handleNewMsg = ({ ticketId: tid, message }) => {
       if (Number(tid) === Number(ticketId)) {
-        setMessages((prev) => [...prev, message]);
+        setMessages((prev) => {
+          if (!message || !message.id) return [...prev, message];
+          if (prev.some((m) => m.id === message.id)) return prev;
+          return [...prev, message];
+        });
 
         setTimeout(() => scrollToBottom(), 100);
       }

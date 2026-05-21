@@ -140,7 +140,9 @@ router.post("/", userAuth, ticketValidation, async (req, res) => {
   try {
     const ticket = await prisma.ticket.create({
       data: {
-        userId: req.user.id,
+        user: {
+          connect: { id: req.user.id },
+        },
         name: name?.trim(),
         department,
         location,

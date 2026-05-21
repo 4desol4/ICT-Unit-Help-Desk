@@ -177,23 +177,7 @@ export default function UserLogin() {
         }
 
         @media (max-width: 640px) {
-          .main-card {
-            border-radius: 24px !important;
-          }
-
-          .left-content,
-          .right-content {
-            padding: 26px !important;
-          }
-
-          .left-panel {
-            min-height: 300px !important;
-          }
-
-          .hero-title {
-            font-size: 2rem !important;
-          }
-
+     
           .welcome-title {
             font-size: 2rem !important;
           }
@@ -228,72 +212,82 @@ export default function UserLogin() {
         }}
       >
         {/* LEFT SECTION */}
+
         <div
           className="left-panel"
           style={{
             position: "relative",
             minHeight: 720,
             overflow: "hidden",
-            display: "flex",
-            alignItems: "center",
+            background: "#020617",
           }}
         >
           {/* IMAGE */}
           <img
             src="/bg.png"
-            alt="User Support"
+            alt="ICT Support"
             style={{
               position: "absolute",
               inset: 0,
               width: "100%",
               height: "100%",
               objectFit: "cover",
-              objectPosition: "center",
-              filter: "brightness(0.88)",
-              transform: "scale(1.04)",
+              objectPosition: "center top",
+              filter: `
+        brightness(1.02)
+        contrast(1.08)
+        saturate(1.08)
+      `,
+              transform: "scale(1.02)",
             }}
           />
 
-          {/* OVERLAY */}
+         
           <div
             style={{
               position: "absolute",
               inset: 0,
               background: `
-                linear-gradient(
-                  135deg,
-                  rgba(2,6,23,0.06) 0%,
-                  rgba(59,130,246,0.02) 45%,
-                  rgba(15,23,42,0.03) 100%
-                )
-              `,
+        linear-gradient(
+          135deg,
+          rgba(2,6,23,0.42) 0%,
+          rgba(2,6,23,0.28) 40%,
+          rgba(2,6,23,0.20) 100%
+        )
+      `,
+              zIndex: 1,
             }}
           />
 
-          {/* LIGHT EFFECTS */}
+          {/* BOTTOM OVERLAY */}
           <div
             style={{
               position: "absolute",
-              width: 320,
-              height: 320,
-              borderRadius: "50%",
-              background: "rgba(99,102,241,0.28)",
-              filter: "blur(100px)",
-              top: -60,
-              right: -80,
+              inset: 0,
+              background: `
+        linear-gradient(
+          to top,
+          rgba(2,6,23,0.58) 0%,
+          rgba(2,6,23,0.35) 35%,
+          transparent 65%
+        )
+      `,
+              zIndex: 1,
             }}
           />
 
+          {/* GLOW EFFECT */}
           <div
             style={{
               position: "absolute",
-              width: 220,
-              height: 220,
+              width: 340,
+              height: 340,
               borderRadius: "50%",
-              background: "rgba(168,85,247,0.22)",
-              filter: "blur(90px)",
-              bottom: -40,
-              left: -30,
+              background: "rgba(99,102,241,0.22)",
+              filter: "blur(120px)",
+              top: -80,
+              right: -100,
+              zIndex: 1,
             }}
           />
 
@@ -301,66 +295,89 @@ export default function UserLogin() {
           <div
             className="left-content"
             style={{
-              position: "relative",
-              zIndex: 2,
-              padding: 50,
-              color: "#fff",
+              position: "absolute",
+              inset: 0,
+
+              zIndex: 5,
+
+              display: "flex",
+              flexDirection: "column",
+
+              alignItems: "center",
+              justifyContent: "center",
+
+              textAlign: "center",
+
               width: "100%",
+              height: "100%",
+
+              padding: "50px",
+
+              color: "#fff",
             }}
           >
+            {/* ICON */}
             <div
               style={{
-                width: 84,
-                height: 84,
-                borderRadius: 28,
-                background: "rgba(255,255,255,0.12)",
-                backdropFilter: "blur(12px)",
-                border: "1px solid rgba(255,255,255,0.14)",
+                width: 82,
+                height: 82,
+                borderRadius: 26,
+                background: "rgba(255,255,255,0.10)",
+                backdropFilter: "blur(14px)",
+                border: "1px solid rgba(255,255,255,0.12)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 marginBottom: 28,
+                boxShadow: "0 10px 40px rgba(0,0,0,0.25)",
                 animation: "float 4s ease-in-out infinite",
               }}
             >
-              <Users size={42} color="#fff" />
+              <Users size={40} color="#fff" />
             </div>
 
+            {/* TITLE */}
             <h1
               className="hero-title"
               style={{
-                fontSize: "clamp(2.4rem,4vw,4.2rem)",
+                fontSize: "clamp(2.8rem,4vw,4.5rem)",
                 fontWeight: 900,
-                lineHeight: 1.02,
+                lineHeight: 1,
                 marginBottom: 18,
-                maxWidth: 560,
                 letterSpacing: "-0.05em",
+                textAlign: "center",
+                textShadow: "0 8px 30px rgba(0,0,0,0.45)",
               }}
             >
-              Ministry ICT
+              MBSE ICT Unit
               <span
                 style={{
                   display: "block",
-                  background: "linear-gradient(90deg,#86efac,#ffffff)",
+                  marginTop: 8,
+                  background: "linear-gradient(90deg,#a5f3fc,#86efac,#ffffff)",
                   WebkitBackgroundClip: "text",
                   WebkitTextFillColor: "transparent",
                 }}
               >
-                Support Portal
+                Help Desk
               </span>
             </h1>
 
+            {/* DESCRIPTION */}
             <p
               style={{
-                fontSize: "clamp(14px,2vw,16px)",
+                fontSize: "16px",
                 lineHeight: 1.8,
-                color: "rgba(255,255,255,0.84)",
+                color: "rgba(255,255,255,0.92)",
                 maxWidth: 520,
-                marginBottom: 32,
+                marginBottom: 30,
+                textAlign: "center",
+                textShadow: "0 3px 14px rgba(0,0,0,0.45)",
               }}
             >
               Submit technical complaints, track support tickets in real-time,
-              and communicate directly with the ICT support team.
+              and communicate directly with the ICT support team securely and
+              efficiently.
             </p>
 
             {/* FEATURE PILLS */}
@@ -369,6 +386,8 @@ export default function UserLogin() {
               style={{
                 display: "flex",
                 flexWrap: "wrap",
+                justifyContent: "center",
+                alignItems: "center",
                 gap: 14,
               }}
             >
@@ -386,15 +405,16 @@ export default function UserLogin() {
                     style={{
                       padding: "12px 18px",
                       borderRadius: 999,
-                      background: "rgba(255,255,255,0.1)",
-                      border: "1px solid rgba(255,255,255,0.12)",
-                      backdropFilter: "blur(10px)",
+                      background: "rgba(255,255,255,0.10)",
+                      border: "1px solid rgba(255,255,255,0.14)",
+                      backdropFilter: "blur(12px)",
                       color: "#fff",
                       fontSize: 13,
                       fontWeight: 600,
                       display: "flex",
                       alignItems: "center",
                       gap: 8,
+                      boxShadow: "0 8px 25px rgba(0,0,0,0.18)",
                       transition: "all 0.25s ease",
                     }}
                   >
@@ -406,6 +426,136 @@ export default function UserLogin() {
             </div>
           </div>
         </div>
+
+        {/* RESPONSIVENESS */}
+        <style>{`
+@media (max-width: 980px) {
+  .login-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .left-panel {
+    min-height: 460px !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .main-card {
+    border-radius: 22px !important;
+    overflow: hidden !important;
+  }
+
+  /* HERO SECTION */
+  .left-panel {
+    min-height: 380px !important;
+    height: 380px !important;
+    max-height: 380px !important;
+
+    position: relative !important;
+    overflow: hidden !important;
+  }
+
+  /* IMAGE */
+  .left-panel img {
+    width: 100% !important;
+    height: 100% !important;
+
+    object-fit: cover !important;
+
+    object-position: center top !important;
+
+    transform: scale(1.02) !important;
+  }
+
+  /* CENTERED CONTENT */
+  .left-content {
+    position: absolute !important;
+    inset: 0 !important;
+
+    width: 100% !important;
+    height: 100% !important;
+
+    display: flex !important;
+    flex-direction: column !important;
+
+    align-items: center !important;
+    justify-content: center !important;
+
+    text-align: center !important;
+
+    padding: 22px !important;
+
+    z-index: 10 !important;
+  }
+
+  /* ICON */
+  .left-content > div:first-child {
+    width: 58px !important;
+    height: 58px !important;
+
+    border-radius: 18px !important;
+
+    margin-bottom: 14px !important;
+  }
+
+  .left-content > div:first-child svg {
+    width: 28px !important;
+    height: 28px !important;
+  }
+
+  /* TITLE */
+  .hero-title {
+    font-size: 1.85rem !important;
+    line-height: 1.05 !important;
+
+    margin-bottom: 12px !important;
+
+    text-align: center !important;
+  }
+
+  /* DESCRIPTION */
+  .left-content p {
+    font-size: 12px !important;
+    line-height: 1.55 !important;
+
+    max-width: 290px !important;
+
+    margin-bottom: 16px !important;
+
+    text-align: center !important;
+  }
+
+  /* FEATURES */
+  .feature-row {
+    justify-content: center !important;
+
+    gap: 8px !important;
+  }
+
+  .feature-pill {
+    width: auto !important;
+
+    padding: 8px 12px !important;
+
+    font-size: 11px !important;
+  }
+
+  .feature-pill svg {
+    width: 12px !important;
+    height: 12px !important;
+  }
+
+  /* RIGHT PANEL */
+  .right-content {
+    padding: 24px !important;
+  }
+
+  .welcome-title {
+    font-size: 1.8rem !important;
+    line-height: 1.08 !important;
+  }
+}
+`}</style>
 
         {/* RIGHT LOGIN PANEL */}
         <div

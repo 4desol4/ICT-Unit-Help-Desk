@@ -20,6 +20,15 @@ router.post("/upload", userAuth, async (req, res) => {
       return res.status(400).json({ error: "Invalid image format" });
     }
 
+    const [, base64Payload] = image.split(",");
+    const base64 = base64Payload || image;
+    const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+    const imageSizeBytes = Math.ceil((base64.length * 3) / 4) - padding;
+
+    if (imageSizeBytes > 1024 * 1024) {
+      return res.status(413).json({ error: "Image must be 1 MB or smaller." });
+    }
+
     // Upload to Cloudinary
     const imageUrl = await uploadImage(image, ticketId);
 

@@ -337,9 +337,14 @@ function TicketDetailModal({ ticket, agentId, onClose, onUpdate }) {
     setLoadingMsg(true);
 
     try {
-      const msg = await sendAgentMessage(ticket.id, { text: newMsg });
+      const res = await sendAgentMessage(ticket.id, { text: newMsg });
 
-      setMessages((prev) => [...prev, msg]);
+      setMessages((prev) => {
+        const message = res?.data;
+        if (!message) return prev;
+        if (prev.some((m) => m.id === message.id)) return prev;
+        return [...prev, message];
+      });
 
       setNewMsg("");
     } catch (err) {
@@ -525,6 +530,65 @@ function TicketDetailModal({ ticket, agentId, onClose, onUpdate }) {
                 </div>
               ))}
             </div>
+
+            {ticket.images && ticket.images.length > 0 && (
+              <div
+                style={{
+                  marginTop: 24,
+                }}
+              >
+                <div
+                  style={{
+                    marginBottom: 12,
+                    fontSize: 13,
+                    fontWeight: 800,
+                    color: colors.textSecondary,
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                  }}
+                >
+                  Uploaded Images
+                </div>
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
+                    gap: 12,
+                  }}
+                >
+                  {ticket.images.map((image, index) => (
+                    <a
+                      key={index}
+                      href={image}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        display: "block",
+                        borderRadius: 16,
+                        overflow: "hidden",
+                        border: `1px solid ${
+                          isDark ? "rgba(255,255,255,0.08)" : "#e2e8f0"
+                        }`,
+                        background: isDark ? "rgba(255,255,255,0.04)" : "#fff",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <img
+                        src={image}
+                        alt={`Ticket upload ${index + 1}`}
+                        style={{
+                          width: "100%",
+                          height: 90,
+                          objectFit: "cover",
+                          display: "block",
+                        }}
+                      />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* status */}
             <div style={{ marginTop: 28 }}>

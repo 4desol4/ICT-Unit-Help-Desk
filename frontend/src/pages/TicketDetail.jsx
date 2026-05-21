@@ -41,13 +41,21 @@ export default function TicketDetail() {
   useEffect(() => {
     const handleChatMessage = (message) => {
       if (message.ticketId === Number(id)) {
-        setMessages((prev) => [...prev, message]);
+        setMessages((prev) => {
+          if (!message || !message.id) return [...prev, message];
+          if (prev.some((m) => m.id === message.id)) return prev;
+          return [...prev, message];
+        });
       }
     };
 
     const handleNewMessage = ({ ticketId, message }) => {
       if (ticketId === Number(id)) {
-        setMessages((prev) => [...prev, message]);
+        setMessages((prev) => {
+          if (!message || !message.id) return [...prev, message];
+          if (prev.some((m) => m.id === message.id)) return prev;
+          return [...prev, message];
+        });
       }
     };
 
