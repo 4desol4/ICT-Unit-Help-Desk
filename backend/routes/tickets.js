@@ -3,6 +3,7 @@ const router = express.Router();
 const { PrismaClient } = require("@prisma/client");
 const { body, validationResult } = require("express-validator");
 const { agentAuth, userAuth } = require("../middleware/auth");
+const { sendPushNotification, cleanupInvalidTokens } = require("../utils/fcm");
 
 const prisma = new PrismaClient();
 
@@ -153,16 +154,44 @@ router.post("/", userAuth, ticketValidation, async (req, res) => {
     });
 
     req.io.emit("new_ticket", ticket);
-    req.io.emit("agent_notification", {
+    req.io.to("agents").emit("agent_notification", {
       type: "ticket_created",
       ticketId: ticket.id,
       message: `New ticket #${ticket.id} submitted by ${req.user.name || ticket.name}`,
     });
-    req.io.emit("admin_notification", {
+    req.io.to("admins").emit("admin_notification", {
       type: "ticket_created",
       ticketId: ticket.id,
       message: `New ticket #${ticket.id} submitted by ${req.user.name || ticket.name}`,
     });
+
+    try {
+      const agentTokens = await prisma.notificationToken.findMany({
+        where: { role: "agent" },
+      });
+
+      await cleanupInvalidTokens(
+        prisma,
+        agentTokens,
+        await sendPushNotification(
+          agentTokens.map((token) => token.token),
+          {
+            title: `New ticket #${ticket.id}`,
+            body: `Submitted by ${req.user.name || ticket.name}.`,
+            icon: "/favicon.ico",
+            badge: "/favicon.ico",
+            data: {
+              notificationId: `ticket_created_${ticket.id}`,
+              ticketId: String(ticket.id),
+              clickAction: "/agent",
+              type: "ticket_created",
+            },
+          },
+        ),
+      );
+    } catch (pushError) {
+      console.warn("FCM push failed for new ticket:", pushError);
+    }
 
     res.status(201).json(ticket);
   } catch (error) {
@@ -207,6 +236,32 @@ router.patch("/:id", async (req, res) => {
         problem: ticket.problem,
         agentName: ticket.agent?.name || "Support Team",
       });
+
+      if (oldTicket.userId) {
+        const userTokens = await prisma.notificationToken.findMany({
+          where: { role: "user", userId: oldTicket.userId },
+        });
+
+        await cleanupInvalidTokens(
+          prisma,
+          userTokens,
+          await sendPushNotification(
+            userTokens.map((token) => token.token),
+            {
+              title: `Ticket #${ticket.id} resolved`,
+              body: `Your ticket has been resolved by ${ticket.agent?.name || "support"}.`,
+              icon: "/favicon.ico",
+              badge: "/favicon.ico",
+              data: {
+                notificationId: `ticket_resolved_${ticket.id}`,
+                ticketId: String(ticket.id),
+                clickAction: `/ticket/${ticket.id}`,
+                type: "ticket_resolved",
+              },
+            },
+          ),
+        );
+      }
     } else if (statusChanged && ticket.userId) {
       const friendlyStatus =
         ticket.status === "in_progress"
@@ -221,6 +276,30 @@ router.patch("/:id", async (req, res) => {
         userId: ticket.userId,
         message: `Your ticket #${ticket.id} is now ${friendlyStatus}.`,
       });
+
+      const userTokens = await prisma.notificationToken.findMany({
+        where: { role: "user", userId: ticket.userId },
+      });
+
+      await cleanupInvalidTokens(
+        prisma,
+        userTokens,
+        await sendPushNotification(
+          userTokens.map((token) => token.token),
+          {
+            title: `Ticket #${ticket.id} updated`,
+            body: `Your ticket status changed to ${friendlyStatus}.`,
+            icon: "/favicon.ico",
+            badge: "/favicon.ico",
+            data: {
+              notificationId: `ticket_status_${ticket.id}`,
+              ticketId: String(ticket.id),
+              clickAction: `/ticket/${ticket.id}`,
+              type: "ticket_status",
+            },
+          },
+        ),
+      );
     }
 
     req.io.emit("ticket_updated", ticket);

@@ -1,6 +1,7 @@
 const express = require("express");
 const { PrismaClient } = require("@prisma/client");
 const { agentAuth, userAuth } = require("../middleware/auth");
+const { sendPushNotification, cleanupInvalidTokens } = require("../utils/fcm");
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -47,12 +48,36 @@ router.post("/:ticketId/user", userAuth, async (req, res) => {
     req.io.emit("new_message", { ticketId, message });
 
     if (ticket.agentId) {
-      req.io.emit("agent_notification", {
+      req.io.to(`agent_${ticket.agentId}`).emit("agent_notification", {
         type: "new_message",
         ticketId,
         agentId: ticket.agentId,
         message: `New message on ticket #${ticketId} from ${req.user.name || ticket.name}`,
       });
+
+      const agentTokens = await prisma.notificationToken.findMany({
+        where: { role: "agent", agentId: ticket.agentId },
+      });
+
+      await cleanupInvalidTokens(
+        prisma,
+        agentTokens,
+        await sendPushNotification(
+          agentTokens.map((token) => token.token),
+          {
+            title: `Ticket #${ticketId} update`,
+            body: `New message from ${req.user.name || ticket.name}`,
+            icon: "/favicon.ico",
+            badge: "/favicon.ico",
+            data: {
+              notificationId: `agent_message_${ticketId}`,
+              ticketId: String(ticketId),
+              clickAction: `/agent`,
+              type: "new_message",
+            },
+          },
+        ),
+      );
     }
 
     res.status(201).json(message);
@@ -91,12 +116,36 @@ router.post("/:ticketId/agent", agentAuth, async (req, res) => {
 
     // Notify user for their ticket via userId, client filters by logged-in user
     if (ticket.userId) {
-      req.io.emit("user_notification", {
+      req.io.to(`user_${ticket.userId}`).emit("user_notification", {
         type: "new_message",
         ticketId,
         userId: ticket.userId,
         message: `New message on ticket #${ticketId} from ${req.agent.name}`,
       });
+
+      const userTokens = await prisma.notificationToken.findMany({
+        where: { role: "user", userId: ticket.userId },
+      });
+
+      await cleanupInvalidTokens(
+        prisma,
+        userTokens,
+        await sendPushNotification(
+          userTokens.map((token) => token.token),
+          {
+            title: `Response on ticket #${ticketId}`,
+            body: `Agent ${req.agent.name} replied to your ticket.`,
+            icon: "/favicon.ico",
+            badge: "/favicon.ico",
+            data: {
+              notificationId: `user_message_${ticketId}`,
+              ticketId: String(ticketId),
+              clickAction: `/ticket/${ticketId}`,
+              type: "new_message",
+            },
+          },
+        ),
+      );
     }
 
     res.status(201).json(message);

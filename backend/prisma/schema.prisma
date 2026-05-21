@@ -19,22 +19,24 @@ model Admin {
 // ─── Agent ────────────────────────────────
 // Registered by admin — has name + password
 model Agent {
-  id        Int      @id @default(autoincrement())
-  name      String
-  username  String   @unique
-  password  String   // bcrypt hashed
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  tickets   Ticket[]
-  messages  Message[]
+  id                 Int                 @id @default(autoincrement())
+  name               String
+  username           String              @unique
+  password           String              // bcrypt hashed
+  isActive           Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  tickets            Ticket[]
+  messages           Message[]
+  notificationTokens NotificationToken[]
 }
 
 // ─── User ────────────────────────────────
 model User {
-  id           Int      @id @default(autoincrement())
-  oracleNumber String   @unique
-  createdAt    DateTime @default(now())
-  tickets      Ticket[]
+  id                 Int                 @id @default(autoincrement())
+  oracleNumber       String              @unique
+  createdAt          DateTime            @default(now())
+  tickets            Ticket[]
+  notificationTokens NotificationToken[]
 }
 
 // ─── Ticket ───────────────────────────────
@@ -79,4 +81,20 @@ model Message {
   // null if sender is the staff user
   agentId   Int?
   agent     Agent?   @relation(fields: [agentId], references: [id])
+}
+
+model NotificationToken {
+  id         Int      @id @default(autoincrement())
+  token      String   @unique
+  platform   String   @default("web")
+  role       String
+  userAgent  String?
+  userId     Int?
+  agentId    Int?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  lastSeenAt DateTime @default(now())
+
+  user       User?    @relation(fields: [userId], references: [id])
+  agent      Agent?   @relation(fields: [agentId], references: [id])
 }

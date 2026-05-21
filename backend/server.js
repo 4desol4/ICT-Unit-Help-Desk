@@ -2,6 +2,7 @@ const express = require("express");
 const cors = require("cors");
 const http = require("http");
 const { Server } = require("socket.io");
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -14,6 +15,7 @@ const authRoutes = require("./routes/auth");
 const agentRoutes = require("./routes/agents");
 const messageRoutes = require("./routes/messages");
 const imageRoutes = require("./routes/images");
+const notificationRoutes = require("./routes/notifications");
 
 const app = express();
 const server = http.createServer(app);
@@ -63,14 +65,48 @@ app.use("/api/agents", agentRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/messages", messageRoutes);
 app.use("/api/images", imageRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "ICT Support Desk API running ✅" });
 });
 
+io.use((socket, next) => {
+  const token =
+    socket.handshake.auth?.token || socket.handshake.query?.token || null;
+
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "ict_support_secret_key",
+    );
+    socket.data.userInfo = decoded;
+    return next();
+  } catch (error) {
+    console.warn("Socket auth failed:", error.message);
+    return next();
+  }
+});
+
 io.on("connection", (socket) => {
-  console.log(`Connected: ${socket.id}`);
-  socket.on("disconnect", () => console.log(`Disconnected: ${socket.id}`));
+  const auth = socket.data.userInfo;
+  console.log(
+    `Connected: ${socket.id}`,
+    auth ? `${auth.role}:${auth.id}` : "anonymous",
+  );
+
+  if (auth) {
+    socket.join(`${auth.role}s`);
+    socket.join(`${auth.role}_${auth.id}`);
+  }
+
+  socket.on("disconnect", () => {
+    console.log(`Disconnected: ${socket.id}`);
+  });
 });
 
 const PORT = process.env.PORT || 5000;

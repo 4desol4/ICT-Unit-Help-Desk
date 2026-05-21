@@ -74,4 +74,18 @@ function userAuth(req, res, next) {
   }
 }
 
-module.exports = { agentAuth, adminAuth, userAuth };
+function parseToken(header) {
+  if (!header || !header.startsWith("Bearer ")) {
+    return null;
+  }
+
+  const token = header.split(" ")[1];
+
+  try {
+    return jwt.verify(token, SECRET);
+  } catch {
+    return null;
+  }
+}
+
+module.exports = { agentAuth, adminAuth, userAuth, parseToken };
