@@ -35,6 +35,8 @@ if (existingToken) {
   api.defaults.headers.common["Authorization"] = `Bearer ${existingToken}`;
 }
 
+export default api;
+
 // Attach token to every request automatically
 api.interceptors.request.use(
   (config) => {

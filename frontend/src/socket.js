@@ -1,12 +1,26 @@
 import { io } from "socket.io-client";
+import { getToken } from "./api";
 
-// Production: use full backend URL; Dev: use window origin (localhost)
 const socketUrl =
-  window.location.hostname === "localhost" ||
+  __VITE_SOCKET_URL__ ||
+  (window.location.hostname === "localhost" ||
   window.location.hostname === "127.0.0.1"
-    ? window.location.origin // Use localhost origin in dev
-    : "https://ict-unit-help-desk.onrender.com"; // Use full backend URL in production
+    ? "http://localhost:5000"
+    : window.location.origin);
 
-const socket = io(socketUrl);
+const socket = io(socketUrl, {
+  autoConnect: false,
+  transports: ["websocket", "polling"],
+  auth: {
+    token: getToken(),
+  },
+});
+
+export const connectSocket = () => {
+  socket.auth = { token: getToken() };
+  if (!socket.connected) {
+    socket.connect();
+  }
+};
 
 export default socket;

@@ -13,7 +13,10 @@ import {
   X,
 } from "lucide-react";
 
-export default function Navbar() {
+export default function Navbar({
+  notificationCount = 0,
+  notificationStatus = "",
+}) {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -294,6 +297,28 @@ export default function Navbar() {
             {isDark ? <Sun size={16} /> : <Moon size={16} />}
             {isDark ? "Light" : "Dark"}
           </button>
+
+          {notificationCount > 0 && (
+            <div
+              title={notificationStatus}
+              style={{
+                position: "relative",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                minWidth: 32,
+                minHeight: 32,
+                fontSize: 12,
+                fontWeight: 700,
+                color: isDark ? "#ffffff" : "#0f172a",
+                background: isDark ? "#374151" : "#e2e8f0",
+                borderRadius: 999,
+                border: `1px solid ${colors.border}`,
+              }}
+            >
+              {notificationCount}
+            </div>
+          )}
 
           {/* Logout */}
           {user && (

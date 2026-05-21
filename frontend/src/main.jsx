@@ -5,6 +5,7 @@ import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import App from "./App";
 import "./index.css";
+import { registerServiceWorker } from "./serviceWorkerRegistration";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <BrowserRouter>
@@ -15,3 +16,5 @@ ReactDOM.createRoot(document.getElementById("root")).render(
     </AuthProvider>
   </BrowserRouter>,
 );
+
+registerServiceWorker();

@@ -6,6 +6,7 @@ export default function Notification({
   message,
   type = "info",
   onClose,
+  onClick,
   duration = 5000,
 }) {
   const { isDark, colors } = useTheme();
@@ -51,6 +52,7 @@ export default function Notification({
 
   return (
     <div
+      onClick={onClick}
       style={{
         zIndex: 1000,
         minWidth: "clamp(300px, 40vw, 400px)",
@@ -68,6 +70,7 @@ export default function Notification({
         opacity: visible ? 1 : 0,
         transform: visible ? "translateY(0)" : "translateY(-20px)",
         transition: "all 0.3s ease",
+        cursor: onClick ? "pointer" : "default",
       }}
     >
       {getIcon()}
@@ -82,7 +85,8 @@ export default function Notification({
         {message}
       </div>
       <button
-        onClick={() => {
+        onClick={(event) => {
+          event.stopPropagation();
           setVisible(false);
           setTimeout(onClose, 300);
         }}
