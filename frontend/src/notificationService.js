@@ -1,31 +1,3 @@
-// ===== FILE: frontend/src/notificationService.js =====
-//
-// BUGS FIXED:
-//
-//  1. Permission was requested silently in a useEffect — most browsers
-//     BLOCK notification permission prompts unless triggered by a user
-//     gesture (button click). Silent auto-prompts are rejected, leaving
-//     Notification.permission stuck at "default" forever, which means
-//     initializePushNotifications() exits early and no FCM token is
-//     ever registered.
-//
-//     Fix: requestNotificationPermission() is unchanged (it stays a helper),
-//     but the App.jsx useEffect now calls a new exported function
-//     `askNotificationPermission()` that is intentionally separate so you can
-//     wire it to a "Enable Notifications" button. The silent-init path still
-//     works if permission was already granted from a previous session.
-//
-//  2. getFcmToken() was called before the service worker was ready.
-//     Firebase requires the SW to be in the "activated" state before it can
-//     return a valid token. Added `await registration.update()` + wait for
-//     the "activated" state.
-//
-//  3. The FCM token was registered to /api/notifications/register but the
-//     Authorization header wasn't guaranteed to be set at that point (race
-//     between login and SW init). The api instance now always re-reads from
-//     localStorage via the interceptor so this is fine, but added an explicit
-//     guard just in case.
-
 import api, { getToken as getAuthToken } from "./api";
 import { getToken as getFcmToken, onMessage } from "firebase/messaging";
 import { messaging } from "./firebase";

@@ -35,9 +35,12 @@ const io = new Server(server, {
     origin: clientOrigins,
     methods: ["GET", "POST"],
     credentials: true,
-    allowEIO3: true,
   },
+
+  allowEIO3: true,
+
   transports: ["websocket", "polling"],
+
   pingInterval: 25000,
   pingTimeout: 60000,
 });

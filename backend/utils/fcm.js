@@ -10,7 +10,7 @@ function initFirebase() {
 
   let credential;
 
-  const keyPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
+  const keyPath = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
   if (keyPath) {
     const resolved = path.isAbsolute(keyPath)
       ? keyPath
@@ -21,7 +21,7 @@ function initFirebase() {
       credential = admin.credential.cert(serviceAccount);
     } else {
       console.warn(
-        `[FCM] FIREBASE_SERVICE_ACCOUNT_PATH set to "${resolved}" but file not found.`,
+        `[FCM] FIREBASE_SERVICE_ACCOUNT_JSON set to "${resolved}" but file not found.`,
       );
     }
   }
@@ -38,7 +38,7 @@ function initFirebase() {
     } else {
       console.warn(
         "[FCM] No Firebase credentials found. " +
-          "Set FIREBASE_SERVICE_ACCOUNT_PATH or " +
+          "Set FIREBASE_SERVICE_ACCOUNT_JSON or " +
           "FIREBASE_PROJECT_ID + FIREBASE_CLIENT_EMAIL + FIREBASE_PRIVATE_KEY.",
       );
       return null;
