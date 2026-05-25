@@ -2,11 +2,9 @@ import { io } from "socket.io-client";
 import { getToken } from "./api";
 
 const socketUrl =
-  import.meta.env.VITE_SOCKET_URL ||
-  (window.location.hostname === "localhost" ||
-  window.location.hostname === "127.0.0.1"
-    ? "http://localhost:5000"
-    : "https://ict-unit-help-desk.onrender.com");
+  import.meta.env.VITE_SOCKET_URL || "https://ict-unit-help-desk.onrender.com";
+
+console.log("SOCKET URL:", socketUrl);
 
 const socket = io(socketUrl, {
   autoConnect: false,
@@ -28,10 +26,6 @@ const socket = io(socketUrl, {
 
 socket.on("connect", () => {
   console.log("✅ Socket connected:", socket.id);
-});
-
-socket.on("disconnect", (reason) => {
-  console.log("❌ Socket disconnected:", reason);
 });
 
 socket.on("connect_error", (err) => {
