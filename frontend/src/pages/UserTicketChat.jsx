@@ -118,16 +118,10 @@ export default function UserTicketChat() {
     setSending(true);
 
     try {
-      const res = await sendUserMessage(ticketId, {
+      await sendUserMessage(ticketId, {
         text,
         senderName: ticket?.name,
       });
-
-      if (res?.data) {
-        setMessages((prev) => [...prev, res.data]);
-
-        setTimeout(() => scrollToBottom(), 100);
-      }
     } catch (err) {
       console.error("Failed to send message", err);
 
