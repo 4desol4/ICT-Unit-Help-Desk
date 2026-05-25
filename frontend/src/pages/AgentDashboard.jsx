@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
@@ -141,14 +141,10 @@ function DashboardStats({ tickets, agentStats }) {
   );
 }
 
-// ─────────────────────────────────────────────
-// Ticket Card
-// ─────────────────────────────────────────────
 function AgentTicketCard({ ticket, onSelect }) {
   const { isDark, colors } = useTheme();
 
   const hours = Math.floor((Date.now() - new Date(ticket.createdAt)) / 3600000);
-
   const timeAgo = hours > 0 ? `${hours}h ago` : "now";
 
   return (
@@ -193,13 +189,7 @@ function AgentTicketCard({ ticket, onSelect }) {
           marginBottom: 16,
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            gap: 10,
-            flexWrap: "wrap",
-          }}
-        >
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <PriorityBadge priority={ticket.priority} />
           <StatusBadge status={ticket.status} />
         </div>
@@ -280,7 +270,7 @@ function AgentTicketCard({ ticket, onSelect }) {
 }
 
 // ─────────────────────────────────────────────
-// Modal
+// Modal — FIXED: real-time messages via socket
 // ─────────────────────────────────────────────
 function TicketDetailModal({ ticket, agentId, onClose, onUpdate }) {
   const { isDark, colors } = useTheme();
@@ -294,14 +284,46 @@ function TicketDetailModal({ ticket, agentId, onClose, onUpdate }) {
   const [newMsg, setNewMsg] = useState("");
   const [loadingMsg, setLoadingMsg] = useState(false);
 
+  // Ref to scroll to bottom on new message
+  const messagesEndRef = useRef(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
   useEffect(() => {
     loadMessages();
+  }, [ticket.id]);
+
+  // FIX: Subscribe to real-time socket messages for this ticket.
+  // Without this the agent had to close and reopen the modal to see new messages.
+  useEffect(() => {
+    const handleNewMessage = ({ ticketId: tid, message }) => {
+      if (Number(tid) !== Number(ticket.id)) return;
+
+      setMessages((prev) => {
+        // Guard against duplicates (message may already be in state from the
+        // sendAgentMessage API call response that returns immediately).
+        if (!message || !message.id) return [...prev, message];
+        if (prev.some((m) => m.id === message.id)) return prev;
+        return [...prev, message];
+      });
+
+      setTimeout(() => scrollToBottom(), 80);
+    };
+
+    socket.on("new_message", handleNewMessage);
+
+    return () => {
+      socket.off("new_message", handleNewMessage);
+    };
   }, [ticket.id]);
 
   const loadMessages = async () => {
     try {
       const res = await getMessages(ticket.id);
       setMessages(res.data);
+      setTimeout(() => scrollToBottom(), 80);
     } catch (err) {
       console.error(err);
     }
@@ -318,12 +340,8 @@ function TicketDetailModal({ ticket, agentId, onClose, onUpdate }) {
       });
 
       onUpdate(res.data);
-
       setSaved(true);
-
-      setTimeout(() => {
-        onClose();
-      }, 900);
+      setTimeout(() => onClose(), 900);
     } catch (err) {
       alert("Failed to update ticket");
     } finally {
@@ -332,23 +350,28 @@ function TicketDetailModal({ ticket, agentId, onClose, onUpdate }) {
   };
 
   const handleSendMessage = async () => {
-    if (!newMsg.trim()) return;
+    if (!newMsg.trim() || loadingMsg) return;
 
+    const text = newMsg;
+    setNewMsg("");
     setLoadingMsg(true);
 
     try {
-      const res = await sendAgentMessage(ticket.id, { text: newMsg });
+      const res = await sendAgentMessage(ticket.id, { text });
 
-      setMessages((prev) => {
-        const message = res?.data;
-        if (!message) return prev;
-        if (prev.some((m) => m.id === message.id)) return prev;
-        return [...prev, message];
-      });
-
-      setNewMsg("");
+      // Optimistically add the message — the socket broadcast will be ignored
+      // by the duplicate guard above if it arrives before the state update.
+      const message = res?.data;
+      if (message) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === message.id)) return prev;
+          return [...prev, message];
+        });
+        setTimeout(() => scrollToBottom(), 80);
+      }
     } catch (err) {
       alert("Failed to send message");
+      setNewMsg(text); // restore on error
     } finally {
       setLoadingMsg(false);
     }
@@ -364,261 +387,165 @@ function TicketDetailModal({ ticket, agentId, onClose, onUpdate }) {
 
   return (
     <div
-      onClick={onClose}
       style={{
         position: "fixed",
         inset: 0,
-        zIndex: 9999,
-        padding: 16,
-        background: "rgba(2,6,23,0.82)",
-        backdropFilter: "blur(10px)",
+        zIndex: 1000,
+        background: "rgba(0,0,0,0.65)",
+        backdropFilter: "blur(6px)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
+        padding: 16,
       }}
     >
       <div
-        onClick={(e) => e.stopPropagation()}
         style={{
           width: "100%",
-          maxWidth: 980,
-          maxHeight: "95vh",
-          overflow: "hidden",
-          borderRadius: 28,
-          background: isDark ? "rgba(15,23,42,0.98)" : "#fff",
+          maxWidth: 900,
+          maxHeight: "92vh",
+          overflowY: "auto",
+          borderRadius: 32,
+          background: isDark
+            ? "linear-gradient(145deg,rgba(15,23,42,0.98),rgba(30,41,59,0.96))"
+            : "#ffffff",
           border: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "#e2e8f0"}`,
-          display: "flex",
-          flexDirection: "column",
+          boxShadow: "0 40px 100px rgba(0,0,0,0.4)",
         }}
       >
         {/* header */}
         <div
           style={{
-            padding: "20px 22px",
-            borderBottom: `1px solid ${
-              isDark ? "rgba(255,255,255,0.06)" : "#e2e8f0"
-            }`,
+            padding: "20px 24px",
+            borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "#e2e8f0"}`,
             display: "flex",
-            alignItems: "center",
             justifyContent: "space-between",
-            gap: 12,
-            flexWrap: "wrap",
+            alignItems: "center",
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              gap: 10,
-              flexWrap: "wrap",
-            }}
-          >
-            <PriorityBadge priority={ticket.priority} />
-            <StatusBadge status={ticket.status} />
+          <div>
+            <h2 style={{ color: colors.text, fontWeight: 800, fontSize: 20 }}>
+              Ticket #{ticket.id}
+            </h2>
+            <p
+              style={{
+                color: colors.textSecondary,
+                fontSize: 13,
+                marginTop: 2,
+              }}
+            >
+              {date} · {ticket.department} · {ticket.location}
+            </p>
           </div>
 
           <button
             onClick={onClose}
             style={{
-              width: 40,
-              height: 40,
+              width: 38,
+              height: 38,
               borderRadius: 12,
               border: "none",
-              cursor: "pointer",
               background: isDark ? "rgba(255,255,255,0.06)" : "#f1f5f9",
               color: colors.text,
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
             <X size={18} />
           </button>
         </div>
 
-        {/* body */}
+        {/* body — two-column grid */}
         <div
           className="modal-grid"
           style={{
-            flex: 1,
-            overflowY: "auto",
-            padding: 22,
             display: "grid",
             gridTemplateColumns: "1fr 1fr",
             gap: 24,
+            padding: 24,
           }}
         >
           {/* left */}
-          <div>
-            <h2
-              style={{
-                fontSize: 22,
-                fontWeight: 800,
-                color: colors.text,
-                marginBottom: 18,
-              }}
-            >
-              Ticket Details
-            </h2>
+          <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+            {/* badges */}
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <PriorityBadge priority={ticket.priority} />
+              <StatusBadge status={ticket.status} />
+            </div>
 
+            {/* problem */}
             <div
               style={{
-                padding: 18,
+                background: isDark ? "rgba(255,255,255,0.04)" : "#f8fafc",
                 borderRadius: 18,
-                lineHeight: 1.7,
-                marginBottom: 20,
-                background: isDark ? "rgba(255,255,255,0.03)" : "#f8fafc",
-                border: `1px solid ${
-                  isDark ? "rgba(255,255,255,0.06)" : "#e2e8f0"
-                }`,
-                color: colors.text,
+                padding: 18,
+                border: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "#e2e8f0"}`,
               }}
             >
-              {ticket.problem}
-            </div>
-
-            <div
-              style={{
-                display: "grid",
-                gap: 12,
-              }}
-            >
-              {[
-                {
-                  label: "User",
-                  value: ticket.name,
-                },
-                {
-                  label: "Department",
-                  value: ticket.department,
-                },
-                {
-                  label: "Location",
-                  value: ticket.location,
-                },
-                {
-                  label: "Created",
-                  value: date,
-                },
-              ].map((item, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    gap: 16,
-                    flexWrap: "wrap",
-                    paddingBottom: 10,
-                    borderBottom: `1px solid ${
-                      isDark ? "rgba(255,255,255,0.05)" : "#f1f5f9"
-                    }`,
-                  }}
-                >
-                  <span
-                    style={{
-                      color: colors.textSecondary,
-                      fontSize: 13,
-                    }}
-                  >
-                    {item.label}
-                  </span>
-
-                  <strong
-                    style={{
-                      color: colors.text,
-                      fontSize: 13,
-                    }}
-                  >
-                    {item.value}
-                  </strong>
-                </div>
-              ))}
-            </div>
-
-            {ticket.images && ticket.images.length > 0 && (
-              <div
+              <p
                 style={{
-                  marginTop: 24,
+                  color: colors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: 1,
+                  marginBottom: 10,
                 }}
               >
-                <div
-                  style={{
-                    marginBottom: 12,
-                    fontSize: 13,
-                    fontWeight: 800,
-                    color: colors.textSecondary,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                  }}
-                >
-                  Uploaded Images
-                </div>
+                Problem
+              </p>
+              <p style={{ color: colors.text, lineHeight: 1.7, fontSize: 14 }}>
+                {ticket.problem}
+              </p>
+            </div>
 
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))",
-                    gap: 12,
-                  }}
-                >
-                  {ticket.images.map((image, index) => (
-                    <a
-                      key={index}
-                      href={image}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: "block",
-                        borderRadius: 16,
-                        overflow: "hidden",
-                        border: `1px solid ${
-                          isDark ? "rgba(255,255,255,0.08)" : "#e2e8f0"
-                        }`,
-                        background: isDark ? "rgba(255,255,255,0.04)" : "#fff",
-                        cursor: "pointer",
-                      }}
-                    >
-                      <img
-                        src={image}
-                        alt={`Ticket upload ${index + 1}`}
-                        style={{
-                          width: "100%",
-                          height: 90,
-                          objectFit: "cover",
-                          display: "block",
-                        }}
-                      />
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* status */}
-            <div style={{ marginTop: 28 }}>
-              <label
+            {/* reporter */}
+            <div
+              style={{
+                background: isDark ? "rgba(255,255,255,0.04)" : "#f8fafc",
+                borderRadius: 18,
+                padding: 18,
+                border: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "#e2e8f0"}`,
+              }}
+            >
+              <p
                 style={{
-                  display: "block",
-                  marginBottom: 12,
-                  fontSize: 12,
-                  fontWeight: 800,
                   color: colors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: 700,
                   textTransform: "uppercase",
+                  letterSpacing: 1,
+                  marginBottom: 10,
+                }}
+              >
+                Reporter
+              </p>
+              <p style={{ color: colors.text, fontSize: 14 }}>{ticket.name}</p>
+            </div>
+
+            {/* status selector */}
+            <div>
+              <p
+                style={{
+                  color: colors.textSecondary,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: 1,
+                  marginBottom: 10,
                 }}
               >
                 Update Status
-              </label>
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: 10,
-                  flexWrap: "wrap",
-                  marginBottom: 18,
-                }}
-              >
+              </p>
+              <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
                 {["open", "in_progress", "resolved"].map((s) => (
                   <button
                     key={s}
                     onClick={() => setStatus(s)}
                     style={{
-                      padding: "12px 18px",
+                      padding: "10px 16px",
                       borderRadius: 14,
                       border: "none",
                       cursor: "pointer",
@@ -633,41 +560,55 @@ function TicketDetailModal({ ticket, agentId, onClose, onUpdate }) {
                       color: status === s ? "#fff" : colors.textSecondary,
                     }}
                   >
-                    {s.replace("_", " ")}
+                    {s === "in_progress"
+                      ? "In Progress"
+                      : s === "resolved"
+                        ? "Resolved"
+                        : "Open"}
                   </button>
                 ))}
               </div>
+            </div>
 
-              {status === "resolved" && (
+            {/* resolution notes */}
+            {status === "resolved" && (
+              <div>
+                <p
+                  style={{
+                    color: colors.textSecondary,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    marginBottom: 10,
+                  }}
+                >
+                  Resolution Notes
+                </p>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Describe the solution..."
+                  rows={4}
+                  placeholder="Describe how the issue was resolved..."
                   style={{
                     width: "100%",
-                    minHeight: 110,
-                    resize: "vertical",
-                    borderRadius: 18,
-                    padding: 16,
-                    outline: "none",
-                    color: colors.text,
+                    padding: "14px 16px",
+                    borderRadius: 16,
+                    border: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "#e2e8f0"}`,
                     background: isDark ? "rgba(255,255,255,0.03)" : "#fff",
-                    border: `1px solid ${
-                      isDark ? "rgba(255,255,255,0.08)" : "#e2e8f0"
-                    }`,
+                    color: colors.text,
+                    fontSize: 13,
+                    resize: "vertical",
+                    outline: "none",
+                    lineHeight: 1.6,
                   }}
                 />
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
-          {/* right */}
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-            }}
-          >
+          {/* right — chat panel */}
+          <div style={{ display: "flex", flexDirection: "column" }}>
             <div
               style={{
                 display: "flex",
@@ -677,18 +618,12 @@ function TicketDetailModal({ ticket, agentId, onClose, onUpdate }) {
               }}
             >
               <MessageCircle size={18} color={colors.text} />
-
-              <h3
-                style={{
-                  fontSize: 18,
-                  fontWeight: 800,
-                  color: colors.text,
-                }}
-              >
+              <h3 style={{ fontSize: 18, fontWeight: 800, color: colors.text }}>
                 Messages
               </h3>
             </div>
 
+            {/* message list */}
             <div
               style={{
                 flex: 1,
@@ -699,9 +634,7 @@ function TicketDetailModal({ ticket, agentId, onClose, onUpdate }) {
                 borderRadius: 20,
                 marginBottom: 16,
                 background: isDark ? "rgba(0,0,0,0.2)" : "#f8fafc",
-                border: `1px solid ${
-                  isDark ? "rgba(255,255,255,0.05)" : "#e2e8f0"
-                }`,
+                border: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "#e2e8f0"}`,
                 display: "flex",
                 flexDirection: "column",
                 gap: 12,
@@ -720,7 +653,7 @@ function TicketDetailModal({ ticket, agentId, onClose, onUpdate }) {
               ) : (
                 messages.map((msg, i) => (
                   <div
-                    key={i}
+                    key={msg.id || i}
                     style={{
                       display: "flex",
                       justifyContent:
@@ -743,34 +676,62 @@ function TicketDetailModal({ ticket, agentId, onClose, onUpdate }) {
                         color: msg.sender === "agent" ? "#fff" : colors.text,
                       }}
                     >
+                      {msg.sender !== "agent" && (
+                        <div
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 700,
+                            marginBottom: 4,
+                            opacity: 0.7,
+                          }}
+                        >
+                          {msg.senderName || "User"}
+                        </div>
+                      )}
                       {msg.text}
+                      <div
+                        style={{
+                          fontSize: 10,
+                          marginTop: 6,
+                          opacity: 0.6,
+                          textAlign: "right",
+                        }}
+                      >
+                        {new Date(msg.createdAt).toLocaleTimeString("en-GB", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </div>
                     </div>
                   </div>
                 ))
               )}
+              {/* auto-scroll anchor */}
+              <div ref={messagesEndRef} />
             </div>
 
-            <div
-              style={{
-                display: "flex",
-                gap: 10,
-              }}
-            >
+            {/* input */}
+            <div style={{ display: "flex", gap: 10 }}>
               <input
                 value={newMsg}
                 onChange={(e) => setNewMsg(e.target.value)}
                 placeholder="Type message..."
-                onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSendMessage();
+                  }
+                }}
+                disabled={loadingMsg}
                 style={{
                   flex: 1,
                   padding: "14px 16px",
                   borderRadius: 16,
                   outline: "none",
-                  border: `1px solid ${
-                    isDark ? "rgba(255,255,255,0.08)" : "#e2e8f0"
-                  }`,
+                  border: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "#e2e8f0"}`,
                   background: isDark ? "rgba(255,255,255,0.03)" : "#fff",
                   color: colors.text,
+                  fontSize: 13,
                 }}
               />
 
@@ -788,6 +749,7 @@ function TicketDetailModal({ ticket, agentId, onClose, onUpdate }) {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
+                  opacity: loadingMsg || !newMsg.trim() ? 0.6 : 1,
                 }}
               >
                 {loadingMsg ? (
@@ -804,9 +766,7 @@ function TicketDetailModal({ ticket, agentId, onClose, onUpdate }) {
         <div
           style={{
             padding: 20,
-            borderTop: `1px solid ${
-              isDark ? "rgba(255,255,255,0.05)" : "#e2e8f0"
-            }`,
+            borderTop: `1px solid ${isDark ? "rgba(255,255,255,0.05)" : "#e2e8f0"}`,
             display: "flex",
             justifyContent: "flex-end",
             gap: 12,
@@ -846,9 +806,14 @@ function TicketDetailModal({ ticket, agentId, onClose, onUpdate }) {
               gap: 8,
             }}
           >
-            {saved ? <CheckCircle2 size={18} /> : <Save size={18} />}
-
-            {saved ? "Updated!" : "Save"}
+            {loading ? (
+              <Loader2 size={18} className="spin" />
+            ) : saved ? (
+              <CheckCircle2 size={18} />
+            ) : (
+              <Save size={18} />
+            )}
+            {saved ? "Updated!" : loading ? "Saving..." : "Save"}
           </button>
         </div>
       </div>
@@ -856,9 +821,6 @@ function TicketDetailModal({ ticket, agentId, onClose, onUpdate }) {
   );
 }
 
-// ─────────────────────────────────────────────
-// Main Dashboard
-// ─────────────────────────────────────────────
 export default function AgentDashboard() {
   const { user } = useAuth();
   const { isDark, colors } = useTheme();
@@ -867,16 +829,10 @@ export default function AgentDashboard() {
 
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [selectedTicket, setSelected] = useState(null);
-
   const [filter, setFilter] = useState("unassigned");
-
   const [newAlert, setNewAlert] = useState(false);
-
-  const [agentStats, setAgentStats] = useState({
-    resolvedCount: 0,
-  });
+  const [agentStats, setAgentStats] = useState({ resolvedCount: 0 });
 
   useEffect(() => {
     if (!user || user.role !== "agent") {
@@ -897,10 +853,8 @@ export default function AgentDashboard() {
 
   const loadAgentStats = useCallback(async () => {
     if (!user?.id) return;
-
     try {
       const res = await getAgentStats(user.id);
-
       setAgentStats({
         resolvedCount: res.data.resolvedCount ?? res.data.resolved ?? 0,
       });
@@ -917,16 +871,14 @@ export default function AgentDashboard() {
   useEffect(() => {
     socket.on("new_ticket", (t) => {
       setTickets((prev) => [t, ...prev]);
-
       setNewAlert(true);
-
-      setTimeout(() => {
-        setNewAlert(false);
-      }, 5000);
+      setTimeout(() => setNewAlert(false), 5000);
     });
 
     socket.on("ticket_updated", (u) => {
       setTickets((prev) => prev.map((t) => (t.id === u.id ? u : t)));
+      // Keep the modal in sync if the updated ticket is currently open
+      setSelected((prev) => (prev && prev.id === u.id ? u : prev));
     });
 
     return () => {
@@ -1095,9 +1047,7 @@ export default function AgentDashboard() {
             borderRadius: 34,
             backdropFilter: "blur(20px)",
             background: isDark ? "rgba(15,23,42,0.78)" : "#fff",
-            border: `1px solid ${
-              isDark ? "rgba(255,255,255,0.08)" : "#e2e8f0"
-            }`,
+            border: `1px solid ${isDark ? "rgba(255,255,255,0.08)" : "#e2e8f0"}`,
             boxShadow: "0 30px 80px rgba(0,0,0,0.12)",
           }}
         >
@@ -1111,21 +1061,9 @@ export default function AgentDashboard() {
             }}
           >
             {[
-              {
-                key: "unassigned",
-                label: "New Queue",
-                icon: AlertCircle,
-              },
-              {
-                key: "my",
-                label: "My Workload",
-                icon: Clipboard,
-              },
-              {
-                key: "all",
-                label: "All Records",
-                icon: BarChart3,
-              },
+              { key: "unassigned", label: "New Queue", icon: AlertCircle },
+              { key: "my", label: "My Workload", icon: Clipboard },
+              { key: "all", label: "All Records", icon: BarChart3 },
             ].map((tab) => (
               <button
                 key={tab.key}
@@ -1157,14 +1095,8 @@ export default function AgentDashboard() {
 
           {/* content */}
           {loading ? (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "100px 0",
-              }}
-            >
+            <div style={{ textAlign: "center", padding: "100px 0" }}>
               <Loader2 size={44} className="spin" color="#6366f1" />
-
               <p
                 style={{
                   marginTop: 16,
@@ -1182,20 +1114,10 @@ export default function AgentDashboard() {
                 padding: "90px 20px",
                 borderRadius: 28,
                 background: isDark ? "rgba(255,255,255,0.02)" : "#f8fafc",
-                border: `2px dashed ${
-                  isDark ? "rgba(255,255,255,0.06)" : "#e2e8f0"
-                }`,
+                border: `2px dashed ${isDark ? "rgba(255,255,255,0.06)" : "#e2e8f0"}`,
               }}
             >
-              <div
-                style={{
-                  fontSize: 60,
-                  marginBottom: 18,
-                }}
-              >
-                🛸
-              </div>
-
+              <div style={{ fontSize: 60, marginBottom: 18 }}>🛸</div>
               <h3
                 style={{
                   color: colors.text,
@@ -1206,22 +1128,12 @@ export default function AgentDashboard() {
               >
                 All Clear!
               </h3>
-
-              <p
-                style={{
-                  color: colors.textSecondary,
-                }}
-              >
+              <p style={{ color: colors.textSecondary }}>
                 No tickets available in this category.
               </p>
             </div>
           ) : (
-            <div
-              style={{
-                display: "grid",
-                gap: 18,
-              }}
-            >
+            <div style={{ display: "grid", gap: 18 }}>
               {filtered.map((ticket) => (
                 <AgentTicketCard
                   key={ticket.id}
@@ -1236,73 +1148,17 @@ export default function AgentDashboard() {
 
       {/* responsive styles */}
       <style>{`
-        *{
-          box-sizing:border-box;
-        }
-
-        .spin{
-          animation:spin 1s linear infinite;
-        }
-
-        .fade-up{
-          animation:fadeUp .5s ease;
-        }
-
-        .pulse{
-          animation:pulse 2s infinite;
-        }
-
-        .ticket-card:hover{
-          transform:translateY(-4px);
-          box-shadow:0 20px 40px rgba(0,0,0,0.15);
-        }
-
-        @keyframes spin{
-          from{transform:rotate(0deg);}
-          to{transform:rotate(360deg);}
-        }
-
-        @keyframes fadeUp{
-          from{
-            opacity:0;
-            transform:translateY(20px);
-          }
-          to{
-            opacity:1;
-            transform:translateY(0);
-          }
-        }
-
-        @keyframes pulse{
-          0%,100%{
-            transform:scale(1);
-          }
-          50%{
-            transform:scale(1.01);
-          }
-        }
-
-        @media (max-width: 900px){
-          .modal-grid{
-            grid-template-columns:1fr !important;
-          }
-        }
-
-        @media (max-width: 768px){
-
-          .ticket-card{
-            padding:18px !important;
-          }
-
-        }
-
-        @media (max-width: 480px){
-
-          .ticket-card{
-            border-radius:20px !important;
-          }
-
-        }
+        *{ box-sizing:border-box; }
+        .spin{ animation:spin 1s linear infinite; }
+        .fade-up{ animation:fadeUp .5s ease; }
+        .pulse{ animation:pulse 2s infinite; }
+        .ticket-card:hover{ transform:translateY(-4px); box-shadow:0 20px 40px rgba(0,0,0,0.15); }
+        @keyframes spin{ from{transform:rotate(0deg);} to{transform:rotate(360deg);} }
+        @keyframes fadeUp{ from{opacity:0;transform:translateY(20px);} to{opacity:1;transform:translateY(0);} }
+        @keyframes pulse{ 0%,100%{transform:scale(1);} 50%{transform:scale(1.01);} }
+        @media (max-width: 900px){ .modal-grid{ grid-template-columns:1fr !important; } }
+        @media (max-width: 768px){ .ticket-card{ padding:18px !important; } }
+        @media (max-width: 480px){ .ticket-card{ border-radius:20px !important; } }
       `}</style>
 
       {selectedTicket && (

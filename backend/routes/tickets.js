@@ -7,33 +7,22 @@ const { sendPushNotification, cleanupInvalidTokens } = require("../utils/fcm");
 
 const prisma = new PrismaClient();
 
-// ─────────────────────────────────────────
-// Validation rules
-// ─────────────────────────────────────────
 const ticketValidation = [
   body("name").trim().notEmpty().withMessage("Your name is required"),
-
   body("department").trim().notEmpty().withMessage("Department is required"),
-
   body("location")
     .trim()
     .notEmpty()
     .withMessage("Room or location is required"),
-
   body("problem")
     .trim()
     .isLength({ min: 10 })
     .withMessage("Please describe the problem in at least 10 characters"),
-
   body("priority")
     .isIn(["high", "medium", "low"])
     .withMessage("Priority must be high, medium, or low"),
 ];
 
-// ─────────────────────────────────────────
-// GET /api/tickets
-// Returns all tickets (admin/agent view)
-// ─────────────────────────────────────────
 router.get("/", async (req, res) => {
   try {
     const { status, priority, department, userId } = req.query;
@@ -57,10 +46,6 @@ router.get("/", async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────
-// GET /api/tickets/user/my
-// Returns only THIS user's tickets
-// ─────────────────────────────────────────
 router.get("/user/my", userAuth, async (req, res) => {
   try {
     const tickets = await prisma.ticket.findMany({
@@ -68,7 +53,6 @@ router.get("/user/my", userAuth, async (req, res) => {
       orderBy: { createdAt: "desc" },
       include: { agent: { select: { id: true, name: true } } },
     });
-
     res.json(tickets);
   } catch (error) {
     console.error("GET /tickets/user/my error:", error);
@@ -76,10 +60,6 @@ router.get("/user/my", userAuth, async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────
-// GET /api/tickets/stats
-// Returns counts for the admin dashboard
-// ─────────────────────────────────────────
 router.get("/stats", async (req, res) => {
   try {
     const [total, open, inProgress, resolved, high, medium, low] =
@@ -104,10 +84,6 @@ router.get("/stats", async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────
-// GET /api/tickets/:id
-// Returns a single ticket by ID
-// ─────────────────────────────────────────
 router.get("/:id", async (req, res) => {
   try {
     const ticket = await prisma.ticket.findUnique({
@@ -126,10 +102,6 @@ router.get("/:id", async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────
-// POST /api/tickets
-// Staff member submits a new problem
-// ─────────────────────────────────────────
 router.post("/", userAuth, ticketValidation, async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -141,9 +113,7 @@ router.post("/", userAuth, ticketValidation, async (req, res) => {
   try {
     const ticket = await prisma.ticket.create({
       data: {
-        user: {
-          connect: { id: req.user.id },
-        },
+        user: { connect: { id: req.user.id } },
         name: name?.trim(),
         department,
         location,
@@ -170,27 +140,59 @@ router.post("/", userAuth, ticketValidation, async (req, res) => {
         where: { role: "agent" },
       });
 
-      await cleanupInvalidTokens(
-        prisma,
-        agentTokens,
-        await sendPushNotification(
-          agentTokens.map((token) => token.token),
-          {
-            title: `New ticket #${ticket.id}`,
-            body: `Submitted by ${req.user.name || ticket.name}.`,
-            icon: "/favicon.ico",
-            badge: "/favicon.ico",
-            data: {
-              notificationId: `ticket_created_${ticket.id}`,
-              ticketId: String(ticket.id),
-              clickAction: "/agent",
-              type: "ticket_created",
+      if (agentTokens.length > 0) {
+        await cleanupInvalidTokens(
+          prisma,
+          agentTokens,
+          await sendPushNotification(
+            agentTokens.map((t) => t.token),
+            {
+              title: `New ticket #${ticket.id}`,
+              body: `Submitted by ${req.user.name || ticket.name}.`,
+              icon: "/favicon.ico",
+              badge: "/favicon.ico",
+              data: {
+                notificationId: `ticket_created_${ticket.id}`,
+                ticketId: String(ticket.id),
+                clickAction: "/agent",
+                type: "ticket_created",
+              },
             },
-          },
-        ),
-      );
+          ),
+        );
+      }
     } catch (pushError) {
-      console.warn("FCM push failed for new ticket:", pushError);
+      console.warn("FCM push failed for agents (new ticket):", pushError);
+    }
+
+    try {
+      const adminTokens = await prisma.notificationToken.findMany({
+        where: { role: "admin" },
+      });
+
+      if (adminTokens.length > 0) {
+        await cleanupInvalidTokens(
+          prisma,
+          adminTokens,
+          await sendPushNotification(
+            adminTokens.map((t) => t.token),
+            {
+              title: `New ticket #${ticket.id}`,
+              body: `Submitted by ${req.user.name || ticket.name}.`,
+              icon: "/favicon.ico",
+              badge: "/favicon.ico",
+              data: {
+                notificationId: `admin_ticket_created_${ticket.id}`,
+                ticketId: String(ticket.id),
+                clickAction: "/admin",
+                type: "ticket_created",
+              },
+            },
+          ),
+        );
+      }
+    } catch (pushError) {
+      console.warn("FCM push failed for admins (new ticket):", pushError);
     }
 
     res.status(201).json(ticket);
@@ -200,10 +202,6 @@ router.post("/", userAuth, ticketValidation, async (req, res) => {
   }
 });
 
-// ─────────────────────────────────────────
-// PATCH /api/tickets/:id
-// Agent claims, updates, or resolves a ticket
-// ─────────────────────────────────────────
 router.patch("/:id", async (req, res) => {
   const { status, agentId, resolution } = req.body;
   const ticketId = Number(req.params.id);
@@ -217,10 +215,7 @@ router.patch("/:id", async (req, res) => {
     if (status) updateData.status = status;
     if (agentId) updateData.agentId = agentId;
     if (resolution) updateData.resolution = resolution;
-
-    if (status === "resolved") {
-      updateData.resolvedAt = new Date();
-    }
+    if (status === "resolved") updateData.resolvedAt = new Date();
 
     const ticket = await prisma.ticket.update({
       where: { id: ticketId },
@@ -229,6 +224,7 @@ router.patch("/:id", async (req, res) => {
     });
 
     const statusChanged = oldTicket.status !== ticket.status;
+
     if (status === "resolved") {
       req.io.emit("ticket_resolved", {
         ticketId: ticket.id,
@@ -246,7 +242,7 @@ router.patch("/:id", async (req, res) => {
           prisma,
           userTokens,
           await sendPushNotification(
-            userTokens.map((token) => token.token),
+            userTokens.map((t) => t.token),
             {
               title: `Ticket #${ticket.id} resolved`,
               body: `Your ticket has been resolved by ${ticket.agent?.name || "support"}.`,
@@ -285,7 +281,7 @@ router.patch("/:id", async (req, res) => {
         prisma,
         userTokens,
         await sendPushNotification(
-          userTokens.map((token) => token.token),
+          userTokens.map((t) => t.token),
           {
             title: `Ticket #${ticket.id} updated`,
             body: `Your ticket status changed to ${friendlyStatus}.`,
@@ -310,21 +306,12 @@ router.patch("/:id", async (req, res) => {
     res.status(500).json({ error: "Could not update ticket" });
   }
 });
-
-// ─────────────────────────────────────────
-// DELETE /api/tickets/:id
-// Admin only — permanently removes a ticket
-// ─────────────────────────────────────────
 router.delete("/:id", async (req, res) => {
   const ticketId = Number(req.params.id);
 
   try {
-    await prisma.ticket.delete({
-      where: { id: ticketId },
-    });
-
+    await prisma.ticket.delete({ where: { id: ticketId } });
     req.io.emit("ticket_deleted", { id: ticketId });
-
     res.json({ message: "Ticket deleted successfully" });
   } catch (error) {
     console.error("DELETE /tickets/:id error:", error);

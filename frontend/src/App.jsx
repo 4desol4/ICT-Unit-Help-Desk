@@ -1,5 +1,5 @@
 ﻿import { Routes, Route, useNavigate } from "react-router-dom";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "./context/AuthContext";
 import { useTheme } from "./context/ThemeContext";
 import socket, { connectSocket } from "./socket";
@@ -13,6 +13,7 @@ import AdminPanel from "./pages/AdminPanel";
 import AgentLogin from "./pages/AgentLogin";
 import AgentDashboard from "./pages/AgentDashboard";
 import UserLogin from "./pages/UserLogin";
+import { Bell } from "lucide-react";
 import {
   initializePushNotifications,
   listenFirebaseMessages,
@@ -28,16 +29,26 @@ export default function App() {
 
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [pushAvailable, setPushAvailable] = useState(false);
+  const [notifPermission, setNotifPermission] = useState(
+    isPushSupported() ? Notification.permission : "unsupported",
+  );
   const [isOnline, setIsOnline] = useState(
     typeof navigator !== "undefined" ? navigator.onLine : true,
   );
 
+  // Keep a ref to user so socket handlers always see current user
+  // without needing to re-register events on every render
+  const userRef = useRef(user);
+  useEffect(() => {
+    userRef.current = user;
+  }, [user]);
+
+  // ── Add an in-app toast ────────────────────────────────────────────────────
   const addNotification = useCallback(
     (message, type = "info", ticketId = null) => {
       const id = `${Date.now()}-${Math.random()}`;
       setNotifications((prev) => [...prev, { id, message, type, ticketId }]);
-      setUnreadCount((value) => value + 1);
+      setUnreadCount((v) => v + 1);
       playNotificationTone();
     },
     [],
@@ -49,165 +60,170 @@ export default function App() {
 
   const handleNotificationClick = useCallback(
     (ticketId) => {
-      if (ticketId) {
-        navigate(`/ticket/${ticketId}`);
-      }
+      if (ticketId) navigate(`/ticket/${ticketId}`);
     },
     [navigate],
   );
 
+  // ── Connect / disconnect socket when user logs in or out ──────────────────
   useEffect(() => {
     if (user) {
       connectSocket();
     } else {
       socket.disconnect();
+      setNotifications([]);
+      setUnreadCount(0);
     }
   }, [user]);
 
+  // ── Register ALL socket event listeners ONCE on mount ────────────────────
+  // We use userRef so the handlers always read the current user without
+  // needing to be re-registered every time `user` changes.
   useEffect(() => {
-    const handleSocketEvents = (eventKey, data) => {
-      if (!user) return;
-
-      const isTargetUser = data?.userId === user.id;
-      const isTargetAgent = !data?.agentId || data.agentId === user.id;
-
-      switch (eventKey) {
-        case "new_ticket":
-          if (user.role === "admin") {
-            addNotification(
-              `New ticket #${data.id} submitted by ${data.name}.`,
-              "notification",
-              null,
-            );
-          }
-          if (user.role === "agent") {
-            addNotification(
-              `New ticket #${data.id} submitted. Check the queue.`,
-              "notification",
-              null,
-            );
-          }
-          break;
-        case "admin_notification":
-          if (user.role === "admin") {
-            addNotification(
-              data.message || "New admin alert",
-              "notification",
-              data.ticketId,
-            );
-          }
-          break;
-        case "ticket_resolved":
-          if (user.role === "user" && isTargetUser) {
-            addNotification(
-              `Your ticket "${data.problem}" has been resolved!`,
-              "success",
-              data.ticketId,
-            );
-          }
-          break;
-        case "user_notification":
-          if (user.role === "user" && isTargetUser) {
-            addNotification(
-              data.message || `Ticket #${data.ticketId} updated.`,
-              "message",
-              data.ticketId,
-            );
-          }
-          break;
-        case "agent_notification":
-          if (user.role === "agent" && isTargetAgent) {
-            addNotification(
-              data.message || `New activity on ticket #${data.ticketId}.`,
-              "message",
-              data.ticketId,
-            );
-          }
-          break;
-        default:
-          break;
+    // new_ticket — broadcast to everyone; we filter by role inside
+    const onNewTicket = (data) => {
+      const u = userRef.current;
+      if (!u) return;
+      if (u.role === "admin") {
+        addNotification(
+          `🎫 New ticket #${data.id} from ${data.name} — ${data.department}`,
+          "notification",
+          data.id,
+        );
+      }
+      if (u.role === "agent") {
+        addNotification(
+          `🎫 New ticket #${data.id} arrived in the queue.`,
+          "notification",
+          data.id,
+        );
       }
     };
 
-    const events = [
-      "new_ticket",
-      "admin_notification",
-      "ticket_resolved",
-      "user_notification",
-      "agent_notification",
-    ];
+    // admin_notification — sent to "admins" room only
+    const onAdminNotification = (data) => {
+      const u = userRef.current;
+      if (!u || u.role !== "admin") return;
+      addNotification(
+        data.message || "New admin notification",
+        "notification",
+        data.ticketId || null,
+      );
+    };
 
-    events.forEach((event) => {
-      socket.on(event, (payload) => handleSocketEvents(event, payload));
-    });
+    // agent_notification — sent to "agents" room or `agent_<id>` room
+    const onAgentNotification = (data) => {
+      const u = userRef.current;
+      if (!u || u.role !== "agent") return;
+      // If agentId is specified only show to that agent; otherwise show to all agents
+      if (data.agentId && data.agentId !== u.id) return;
+      addNotification(
+        data.message || `New activity on ticket #${data.ticketId}`,
+        "message",
+        data.ticketId || null,
+      );
+    };
+
+    // ticket_resolved — tells the user their ticket is done
+    const onTicketResolved = (data) => {
+      const u = userRef.current;
+      if (!u || u.role !== "user") return;
+      if (data.userId !== u.id) return;
+      addNotification(
+        `✅ Your ticket has been resolved by ${data.agentName || "support"}.`,
+        "success",
+        data.ticketId,
+      );
+    };
+
+    // user_notification — status updates sent to `user_<id>` room
+    const onUserNotification = (data) => {
+      const u = userRef.current;
+      if (!u || u.role !== "user") return;
+      if (data.userId !== u.id) return;
+      addNotification(
+        data.message || `Ticket #${data.ticketId} was updated.`,
+        "message",
+        data.ticketId || null,
+      );
+    };
+
+    // ticket_updated — keep UI in sync (no toast needed — silent update)
+    // ticket_deleted — also handled silently inside AdminPanel / AgentDashboard
+
+    socket.on("new_ticket", onNewTicket);
+    socket.on("admin_notification", onAdminNotification);
+    socket.on("agent_notification", onAgentNotification);
+    socket.on("ticket_resolved", onTicketResolved);
+    socket.on("user_notification", onUserNotification);
 
     return () => {
-      events.forEach((event) => socket.off(event));
+      socket.off("new_ticket", onNewTicket);
+      socket.off("admin_notification", onAdminNotification);
+      socket.off("agent_notification", onAgentNotification);
+      socket.off("ticket_resolved", onTicketResolved);
+      socket.off("user_notification", onUserNotification);
     };
-  }, [user, addNotification]);
+    // addNotification is stable (useCallback with no deps) so this runs once
+  }, [addNotification]);
 
+  // ── Firebase push: init silently if permission already granted ────────────
   useEffect(() => {
-    const initializePush = async () => {
-      if (!user || !isPushSupported()) {
-        setPushAvailable(false);
-        return;
-      }
-
-      setPushAvailable(true);
-      const permission =
-        Notification.permission === "granted"
-          ? "granted"
-          : await requestNotificationPermission();
-
-      if (permission === "granted") {
-        await initializePushNotifications(user, user.role);
-      }
-    };
-
-    initializePush();
+    if (!user || !isPushSupported()) return;
+    if (Notification.permission === "granted") {
+      setNotifPermission("granted");
+      initializePushNotifications().catch(console.warn);
+    }
   }, [user]);
 
+  // ── Firebase push: foreground messages → in-app toast ────────────────────
   useEffect(() => {
     const unsubscribe = listenFirebaseMessages((payload) => {
       const ticketId = payload?.data?.ticketId
         ? Number(payload.data.ticketId)
         : null;
-      const title = payload.notification?.title || "Help Desk Notification";
+      const title = payload.notification?.title || "Help Desk";
       const body = payload.notification?.body || "You have a new notification.";
       addNotification(`${title}: ${body}`, "notification", ticketId);
     });
-
     return () => {
       if (typeof unsubscribe === "function") unsubscribe();
     };
   }, [addNotification]);
 
+  // ── Online / offline ───────────────────────────────────────────────────────
   useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener("online", handleOnline);
-    window.addEventListener("offline", handleOffline);
-
+    const on = () => setIsOnline(true);
+    const off = () => setIsOnline(false);
+    window.addEventListener("online", on);
+    window.addEventListener("offline", off);
     return () => {
-      window.removeEventListener("online", handleOnline);
-      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("online", on);
+      window.removeEventListener("offline", off);
     };
   }, []);
 
+  // ── Clear badge when tab is focused ───────────────────────────────────────
   useEffect(() => {
-    const handleFocus = () => setUnreadCount(0);
-    window.addEventListener("focus", handleFocus);
-
-    return () => window.removeEventListener("focus", handleFocus);
+    const onFocus = () => setUnreadCount(0);
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
   }, []);
 
-  const statusMessage = useMemo(() => {
-    if (!isOnline) return "Offline: live socket notifications are paused.";
-    if (!pushAvailable)
-      return "Push notifications not available for this browser.";
-    return "Live socket and push notifications are enabled.";
-  }, [isOnline, pushAvailable]);
+  // ── "Enable Notifications" button ─────────────────────────────────────────
+  const handleEnableNotifications = async () => {
+    const permission = await requestNotificationPermission();
+    setNotifPermission(permission);
+    if (permission === "granted") {
+      await initializePushNotifications();
+    }
+  };
+
+  const statusMessage = isOnline
+    ? notifPermission === "granted"
+      ? "Socket & push notifications active."
+      : "Socket notifications active. Push not enabled."
+    : "Offline — live notifications paused.";
 
   return (
     <div
@@ -226,6 +242,57 @@ export default function App() {
         notificationCount={unreadCount}
         notificationStatus={statusMessage}
       />
+
+      {/* Enable push notifications banner — only shown when logged in + not granted */}
+      {user && isPushSupported() && notifPermission === "default" && (
+        <div
+          style={{
+            background: isDark
+              ? "rgba(99,102,241,0.12)"
+              : "rgba(99,102,241,0.07)",
+            borderBottom: `1px solid ${isDark ? "rgba(99,102,241,0.25)" : "rgba(99,102,241,0.18)"}`,
+            padding: "10px clamp(16px,3vw,28px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              color: isDark ? "#a5b4fc" : "#4338ca",
+              fontSize: 14,
+              fontWeight: 600,
+            }}
+          >
+            <Bell size={16} />
+            Enable push notifications to get alerts even when this tab is
+            closed.
+          </div>
+          <button
+            onClick={handleEnableNotifications}
+            style={{
+              background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+              color: "#fff",
+              border: "none",
+              borderRadius: 12,
+              padding: "9px 20px",
+              fontWeight: 700,
+              fontSize: 13,
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              boxShadow: "0 4px 14px rgba(99,102,241,0.35)",
+            }}
+          >
+            Enable Notifications
+          </button>
+        </div>
+      )}
+
       <main>
         <Routes>
           <Route path="/" element={<SubmitTicket />} />
@@ -239,21 +306,23 @@ export default function App() {
         </Routes>
       </main>
 
-      {notifications.map((notification, index) => (
+      {/* Toast stack */}
+      {notifications.map((n, index) => (
         <div
-          key={notification.id}
+          key={n.id}
           style={{
             position: "fixed",
-            top: `${20 + index * 80}px`,
+            top: `${20 + index * 84}px`,
             right: "20px",
-            zIndex: 1000,
+            zIndex: 9999,
+            transition: "top 0.25s ease",
           }}
         >
           <Notification
-            message={notification.message}
-            type={notification.type}
-            onClose={() => removeNotification(notification.id)}
-            onClick={() => handleNotificationClick(notification.ticketId)}
+            message={n.message}
+            type={n.type}
+            onClose={() => removeNotification(n.id)}
+            onClick={() => handleNotificationClick(n.ticketId)}
           />
         </div>
       ))}

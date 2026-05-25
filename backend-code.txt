@@ -1,0 +1,1345 @@
+
+
+===== FILE: C:\Users\sola\Desktop\ICT Support Desk\backend\middleware\auth.js =====
+
+const jwt = require("jsonwebtoken");
+
+const SECRET = process.env.JWT_SECRET || "ict_support_secret_key";
+
+// Verify agent token
+function agentAuth(req, res, next) {
+  const header = req.headers.authorization;
+
+  if (!header || !header.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "No token provided" });
+  }
+
+  const token = header.split(" ")[1];
+
+  try {
+    const decoded = jwt.verify(token, SECRET);
+
+    if (decoded.role !== "agent") {
+      return res.status(403).json({ error: "Agent access only" });
+    }
+
+    req.agent = decoded;
+    next();
+  } catch {
+    res.status(401).json({ error: "Invalid or expired token" });
+  }
+}
+
+// Verify admin token
+function adminAuth(req, res, next) {
+  const header = req.headers.authorization;
+
+  if (!header || !header.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "No token provided" });
+  }
+
+  const token = header.split(" ")[1];
+
+  try {
+    const decoded = jwt.verify(token, SECRET);
+
+    if (decoded.role !== "admin") {
+      return res.status(403).json({ error: "Admin access only" });
+    }
+
+    req.admin = decoded;
+    next();
+  } catch {
+    res.status(401).json({ error: "Invalid or expired token" });
+  }
+}
+
+// Verify user token
+function userAuth(req, res, next) {
+  const header = req.headers.authorization;
+
+  if (!header || !header.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "No token provided" });
+  }
+
+  const token = header.split(" ")[1];
+
+  try {
+    const decoded = jwt.verify(token, SECRET);
+
+    if (decoded.role !== "user") {
+      return res.status(403).json({ error: "User access only" });
+    }
+
+    req.user = decoded;
+    next();
+  } catch {
+    res.status(401).json({ error: "Invalid or expired token" });
+  }
+}
+
+function parseToken(header) {
+  if (!header || !header.startsWith("Bearer ")) {
+    return null;
+  }
+
+  const token = header.split(" ")[1];
+
+  try {
+    return jwt.verify(token, SECRET);
+  } catch {
+    return null;
+  }
+}
+
+module.exports = { agentAuth, adminAuth, userAuth, parseToken };
+
+
+===== FILE: C:\Users\sola\Desktop\ICT Support Desk\backend\routes\agents.js =====
+
+const express = require("express");
+const bcrypt = require("bcryptjs");
+const { PrismaClient } = require("@prisma/client");
+const { adminAuth } = require("../middleware/auth");
+
+const router = express.Router();
+const prisma = new PrismaClient();
+
+// ─── GET all agents (admin only) ──────────
+router.get("/", adminAuth, async (req, res) => {
+  try {
+    const agents = await prisma.agent.findMany({
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        isActive: true,
+        createdAt: true,
+        // count their tickets
+        _count: { select: { tickets: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json(agents);
+  } catch (error) {
+    res.status(500).json({ error: "Could not fetch agents" });
+  }
+});
+
+// ─── GET agent stats by ID (with resolution count) ─
+router.get("/:id/stats", async (req, res) => {
+  try {
+    const agentId = Number(req.params.id);
+    const [total, resolvedCount, inProgress, open] = await Promise.all([
+      prisma.ticket.count({ where: { agentId } }),
+      prisma.ticket.count({ where: { agentId, status: "resolved" } }),
+      prisma.ticket.count({ where: { agentId, status: "in_progress" } }),
+      prisma.ticket.count({ where: { agentId, status: "open" } }),
+    ]);
+
+    res.json({
+      total,
+      resolvedCount,
+      inProgress,
+      open,
+    });
+  } catch (error) {
+    res.status(500).json({ error: "Could not fetch agent stats" });
+  }
+});
+
+// ─── POST create a new agent (admin only) ──
+router.post("/", adminAuth, async (req, res) => {
+  const { name, username, password } = req.body;
+
+  if (!name || !username || !password) {
+    return res
+      .status(400)
+      .json({ error: "Name, username and password are required" });
+  }
+
+  if (password.length < 6) {
+    return res
+      .status(400)
+      .json({ error: "Password must be at least 6 characters" });
+  }
+
+  try {
+    // Check username not already taken
+    const existing = await prisma.agent.findUnique({ where: { username } });
+    if (existing) {
+      return res.status(400).json({ error: "Username already taken" });
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
+
+    const agent = await prisma.agent.create({
+      data: { name, username, password: hashed },
+      select: {
+        id: true,
+        name: true,
+        username: true,
+        isActive: true,
+        createdAt: true,
+      },
+    });
+
+    res.status(201).json(agent);
+  } catch (error) {
+    res.status(500).json({ error: "Could not create agent" });
+  }
+});
+
+// ─── PATCH toggle agent active/inactive ───
+router.patch("/:id", adminAuth, async (req, res) => {
+  const { isActive, name, password } = req.body;
+
+  try {
+    const updateData = {};
+    if (name) updateData.name = name;
+    if (isActive !== undefined) updateData.isActive = isActive;
+    if (password) updateData.password = await bcrypt.hash(password, 10);
+
+    const agent = await prisma.agent.update({
+      where: { id: Number(req.params.id) },
+      data: updateData,
+      select: { id: true, name: true, username: true, isActive: true },
+    });
+
+    res.json(agent);
+  } catch (error) {
+    res.status(500).json({ error: "Could not update agent" });
+  }
+});
+
+// ─── DELETE an agent ──────────────────────
+router.delete("/:id", adminAuth, async (req, res) => {
+  try {
+    await prisma.agent.delete({ where: { id: Number(req.params.id) } });
+    res.json({ message: "Agent removed" });
+  } catch (error) {
+    res.status(500).json({ error: "Could not delete agent" });
+  }
+});
+
+module.exports = router;
+
+
+===== FILE: C:\Users\sola\Desktop\ICT Support Desk\backend\routes\auth.js =====
+
+const express = require("express");
+const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const { PrismaClient } = require("@prisma/client");
+
+const router = express.Router();
+const prisma = new PrismaClient();
+const SECRET = process.env.JWT_SECRET || "ict_support_secret_key";
+
+router.post("/user/login", async (req, res) => {
+  const { oracleNumber } = req.body;
+
+  if (!oracleNumber || oracleNumber.trim().length === 0) {
+    return res.status(400).json({ error: "Oracle number is required" });
+  }
+
+  try {
+    // Find or create user
+    let user = await prisma.user.findUnique({
+      where: { oracleNumber: oracleNumber.trim() },
+    });
+
+    if (!user) {
+      // First time login - create user
+      user = await prisma.user.create({
+        data: { oracleNumber: oracleNumber.trim() },
+      });
+    }
+
+    const token = jwt.sign(
+      { id: user.id, oracleNumber: user.oracleNumber, role: "user" },
+      SECRET,
+      { expiresIn: "30d" },
+    );
+
+    res.json({
+      token,
+      id: user.id,
+      oracleNumber: user.oracleNumber,
+      role: "user",
+    });
+  } catch (error) {
+    console.error("User login error:", error);
+    res.status(500).json({ error: "Login failed" });
+  }
+});
+
+// ─── Admin login ──────────────────────────
+// POST /api/auth/admin/login
+router.post("/admin/login", async (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ error: "Username and password required" });
+  }
+
+  try {
+    const admin = await prisma.admin.findUnique({ where: { username } });
+
+    if (!admin) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    const match = await bcrypt.compare(password, admin.password);
+    if (!match) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    const token = jwt.sign(
+      { id: admin.id, username: admin.username, role: "admin" },
+      SECRET,
+      { expiresIn: "8h" },
+    );
+
+    res.json({ token, username: admin.username, role: "admin" });
+  } catch (error) {
+    console.error("Admin login error:", error);
+    res.status(500).json({ error: "Login failed" });
+  }
+});
+
+// ─── Agent login ──────────────────────────
+// POST /api/auth/agent/login
+router.post("/agent/login", async (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return res.status(400).json({ error: "Username and password required" });
+  }
+
+  try {
+    const agent = await prisma.agent.findUnique({ where: { username } });
+
+    if (!agent || !agent.isActive) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    const match = await bcrypt.compare(password, agent.password);
+    if (!match) {
+      return res.status(401).json({ error: "Invalid credentials" });
+    }
+
+    const token = jwt.sign(
+      {
+        id: agent.id,
+        name: agent.name,
+        username: agent.username,
+        role: "agent",
+      },
+      SECRET,
+      { expiresIn: "8h" },
+    );
+
+    res.json({
+      token,
+      id: agent.id,
+      name: agent.name,
+      username: agent.username,
+      role: "agent",
+    });
+  } catch (error) {
+    console.error("Agent login error:", error);
+    res.status(500).json({ error: "Login failed" });
+  }
+});
+
+module.exports = router;
+
+
+===== FILE: C:\Users\sola\Desktop\ICT Support Desk\backend\routes\images.js =====
+
+const express = require("express");
+const router = express.Router();
+const { uploadImage } = require("../utils/cloudinary");
+const { userAuth } = require("../middleware/auth");
+
+// ─────────────────────────────────────────
+// POST /api/images/upload
+// Upload ticket image to Cloudinary
+// ─────────────────────────────────────────
+router.post("/upload", userAuth, async (req, res) => {
+  try {
+    const { image, ticketId } = req.body;
+
+    if (!image || !ticketId) {
+      return res.status(400).json({ error: "Image and ticketId required" });
+    }
+
+    // Image should be base64 data URI
+    if (!image.startsWith("data:image")) {
+      return res.status(400).json({ error: "Invalid image format" });
+    }
+
+    const [, base64Payload] = image.split(",");
+    const base64 = base64Payload || image;
+    const padding = base64.endsWith("==") ? 2 : base64.endsWith("=") ? 1 : 0;
+    const imageSizeBytes = Math.ceil((base64.length * 3) / 4) - padding;
+
+    if (imageSizeBytes > 1024 * 1024) {
+      return res.status(413).json({ error: "Image must be 1 MB or smaller." });
+    }
+
+    // Upload to Cloudinary
+    const imageUrl = await uploadImage(image, ticketId);
+
+    res.json({ url: imageUrl, ticketId });
+  } catch (error) {
+    console.error("Image upload error:", error);
+    res.status(500).json({ error: "Failed to upload image" });
+  }
+});
+
+module.exports = router;
+
+
+===== FILE: C:\Users\sola\Desktop\ICT Support Desk\backend\routes\messages.js =====
+
+const express = require("express");
+const { PrismaClient } = require("@prisma/client");
+const { agentAuth, userAuth } = require("../middleware/auth");
+const { sendPushNotification, cleanupInvalidTokens } = require("../utils/fcm");
+
+const router = express.Router();
+const prisma = new PrismaClient();
+
+// ─── GET all messages for a ticket ────────
+// Used by both user and agent to load chat history
+router.get("/:ticketId", async (req, res) => {
+  try {
+    const messages = await prisma.message.findMany({
+      where: { ticketId: Number(req.params.ticketId) },
+      orderBy: { createdAt: "asc" },
+    });
+    res.json(messages);
+  } catch (error) {
+    res.status(500).json({ error: "Could not fetch messages" });
+  }
+});
+
+// ─── POST send a message as user ──────────
+// Requires user token to know which user is sending
+// Emits notification to agent
+router.post("/:ticketId/user", userAuth, async (req, res) => {
+  const { text } = req.body;
+  const ticketId = Number(req.params.ticketId);
+
+  if (!text || !text.trim()) {
+    return res.status(400).json({ error: "Message cannot be empty" });
+  }
+
+  try {
+    const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+    if (!ticket) return res.status(404).json({ error: "Ticket not found" });
+
+    const message = await prisma.message.create({
+      data: {
+        text: text.trim(),
+        sender: "user",
+        senderName: req.user.name || ticket.name,
+        ticketId,
+      },
+    });
+
+    req.io.emit(`chat_${ticketId}`, message);
+    req.io.emit("new_message", { ticketId, message });
+
+    if (ticket.agentId) {
+      req.io.to(`agent_${ticket.agentId}`).emit("agent_notification", {
+        type: "new_message",
+        ticketId,
+        agentId: ticket.agentId,
+        message: `New message on ticket #${ticketId} from ${req.user.name || ticket.name}`,
+      });
+
+      const agentTokens = await prisma.notificationToken.findMany({
+        where: { role: "agent", agentId: ticket.agentId },
+      });
+
+      await cleanupInvalidTokens(
+        prisma,
+        agentTokens,
+        await sendPushNotification(
+          agentTokens.map((token) => token.token),
+          {
+            title: `Ticket #${ticketId} update`,
+            body: `New message from ${req.user.name || ticket.name}`,
+            icon: "/favicon.ico",
+            badge: "/favicon.ico",
+            data: {
+              notificationId: `agent_message_${ticketId}`,
+              ticketId: String(ticketId),
+              clickAction: `/agent`,
+              type: "new_message",
+            },
+          },
+        ),
+      );
+    }
+
+    res.status(201).json(message);
+  } catch (error) {
+    res.status(500).json({ error: "Could not send message" });
+  }
+});
+
+// ─── POST send a message as agent ─────────
+// Requires agent token
+// Emits notification to user
+router.post("/:ticketId/agent", agentAuth, async (req, res) => {
+  const { text } = req.body;
+  const ticketId = Number(req.params.ticketId);
+
+  if (!text || !text.trim()) {
+    return res.status(400).json({ error: "Message cannot be empty" });
+  }
+
+  try {
+    const ticket = await prisma.ticket.findUnique({ where: { id: ticketId } });
+    if (!ticket) return res.status(404).json({ error: "Ticket not found" });
+
+    const message = await prisma.message.create({
+      data: {
+        text: text.trim(),
+        sender: "agent",
+        senderName: req.agent.name,
+        ticketId,
+        agentId: req.agent.id,
+      },
+    });
+
+    req.io.emit(`chat_${ticketId}`, message);
+    req.io.emit("new_message", { ticketId, message });
+
+    // Notify user for their ticket via userId, client filters by logged-in user
+    if (ticket.userId) {
+      req.io.to(`user_${ticket.userId}`).emit("user_notification", {
+        type: "new_message",
+        ticketId,
+        userId: ticket.userId,
+        message: `New message on ticket #${ticketId} from ${req.agent.name}`,
+      });
+
+      const userTokens = await prisma.notificationToken.findMany({
+        where: { role: "user", userId: ticket.userId },
+      });
+
+      await cleanupInvalidTokens(
+        prisma,
+        userTokens,
+        await sendPushNotification(
+          userTokens.map((token) => token.token),
+          {
+            title: `Response on ticket #${ticketId}`,
+            body: `Agent ${req.agent.name} replied to your ticket.`,
+            icon: "/favicon.ico",
+            badge: "/favicon.ico",
+            data: {
+              notificationId: `user_message_${ticketId}`,
+              ticketId: String(ticketId),
+              clickAction: `/ticket/${ticketId}`,
+              type: "new_message",
+            },
+          },
+        ),
+      );
+    }
+
+    res.status(201).json(message);
+  } catch (error) {
+    res.status(500).json({ error: "Could not send message" });
+  }
+});
+
+module.exports = router;
+
+
+===== FILE: C:\Users\sola\Desktop\ICT Support Desk\backend\routes\notifications.js =====
+
+const express = require("express");
+const { PrismaClient } = require("@prisma/client");
+const { parseToken } = require("../middleware/auth");
+
+const prisma = new PrismaClient();
+const router = express.Router();
+
+router.post("/register", async (req, res) => {
+  const { token, platform = "web", userAgent } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ error: "Notification token is required." });
+  }
+
+  const auth = parseToken(req.headers.authorization);
+  if (!auth) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
+
+  const record = {
+    token,
+    platform,
+    userAgent: userAgent || "browser",
+    role: auth.role,
+    lastSeenAt: new Date(),
+  };
+
+  if (auth.role === "user") {
+    record.userId = auth.id;
+  }
+
+  if (auth.role === "agent") {
+    record.agentId = auth.id;
+  }
+
+  try {
+    await prisma.notificationToken.upsert({
+      where: { token },
+      create: record,
+      update: { ...record, updatedAt: new Date() },
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("POST /notifications/register error:", error);
+    res.status(500).json({ error: "Could not register push token." });
+  }
+});
+
+router.delete("/unregister", async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ error: "Notification token is required." });
+  }
+
+  try {
+    await prisma.notificationToken.deleteMany({ where: { token } });
+    res.json({ success: true });
+  } catch (error) {
+    console.error("DELETE /notifications/unregister error:", error);
+    res.status(500).json({ error: "Could not unregister push token." });
+  }
+});
+
+module.exports = router;
+
+
+===== FILE: C:\Users\sola\Desktop\ICT Support Desk\backend\routes\tickets.js =====
+
+const express = require("express");
+const router = express.Router();
+const { PrismaClient } = require("@prisma/client");
+const { body, validationResult } = require("express-validator");
+const { agentAuth, userAuth } = require("../middleware/auth");
+const { sendPushNotification, cleanupInvalidTokens } = require("../utils/fcm");
+
+const prisma = new PrismaClient();
+
+// ─────────────────────────────────────────
+// Validation rules
+// ─────────────────────────────────────────
+const ticketValidation = [
+  body("name").trim().notEmpty().withMessage("Your name is required"),
+
+  body("department").trim().notEmpty().withMessage("Department is required"),
+
+  body("location")
+    .trim()
+    .notEmpty()
+    .withMessage("Room or location is required"),
+
+  body("problem")
+    .trim()
+    .isLength({ min: 10 })
+    .withMessage("Please describe the problem in at least 10 characters"),
+
+  body("priority")
+    .isIn(["high", "medium", "low"])
+    .withMessage("Priority must be high, medium, or low"),
+];
+
+// ─────────────────────────────────────────
+// GET /api/tickets
+// Returns all tickets (admin/agent view)
+// ─────────────────────────────────────────
+router.get("/", async (req, res) => {
+  try {
+    const { status, priority, department, userId } = req.query;
+
+    const filters = {};
+    if (status) filters.status = status;
+    if (priority) filters.priority = priority;
+    if (department) filters.department = department;
+    if (userId) filters.userId = Number(userId);
+
+    const tickets = await prisma.ticket.findMany({
+      where: filters,
+      orderBy: { createdAt: "desc" },
+      include: { agent: { select: { id: true, name: true } } },
+    });
+
+    res.json(tickets);
+  } catch (error) {
+    console.error("GET /tickets error:", error);
+    res.status(500).json({ error: "Could not fetch tickets" });
+  }
+});
+
+// ─────────────────────────────────────────
+// GET /api/tickets/user/my
+// Returns only THIS user's tickets
+// ─────────────────────────────────────────
+router.get("/user/my", userAuth, async (req, res) => {
+  try {
+    const tickets = await prisma.ticket.findMany({
+      where: { userId: req.user.id },
+      orderBy: { createdAt: "desc" },
+      include: { agent: { select: { id: true, name: true } } },
+    });
+
+    res.json(tickets);
+  } catch (error) {
+    console.error("GET /tickets/user/my error:", error);
+    res.status(500).json({ error: "Could not fetch your tickets" });
+  }
+});
+
+// ─────────────────────────────────────────
+// GET /api/tickets/stats
+// Returns counts for the admin dashboard
+// ─────────────────────────────────────────
+router.get("/stats", async (req, res) => {
+  try {
+    const [total, open, inProgress, resolved, high, medium, low] =
+      await Promise.all([
+        prisma.ticket.count(),
+        prisma.ticket.count({ where: { status: "open" } }),
+        prisma.ticket.count({ where: { status: "in_progress" } }),
+        prisma.ticket.count({ where: { status: "resolved" } }),
+        prisma.ticket.count({ where: { priority: "high" } }),
+        prisma.ticket.count({ where: { priority: "medium" } }),
+        prisma.ticket.count({ where: { priority: "low" } }),
+      ]);
+
+    res.json({
+      total,
+      byStatus: { open, inProgress, resolved },
+      byPriority: { high, medium, low },
+    });
+  } catch (error) {
+    console.error("GET /tickets/stats error:", error);
+    res.status(500).json({ error: "Could not fetch stats" });
+  }
+});
+
+// ─────────────────────────────────────────
+// GET /api/tickets/:id
+// Returns a single ticket by ID
+// ─────────────────────────────────────────
+router.get("/:id", async (req, res) => {
+  try {
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: Number(req.params.id) },
+      include: { agent: { select: { id: true, name: true } } },
+    });
+
+    if (!ticket) {
+      return res.status(404).json({ error: "Ticket not found" });
+    }
+
+    res.json(ticket);
+  } catch (error) {
+    console.error("GET /tickets/:id error:", error);
+    res.status(500).json({ error: "Could not fetch ticket" });
+  }
+});
+
+// ─────────────────────────────────────────
+// POST /api/tickets
+// Staff member submits a new problem
+// ─────────────────────────────────────────
+router.post("/", userAuth, ticketValidation, async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
+
+  const { name, department, location, problem, priority, images } = req.body;
+
+  try {
+    const ticket = await prisma.ticket.create({
+      data: {
+        user: {
+          connect: { id: req.user.id },
+        },
+        name: name?.trim(),
+        department,
+        location,
+        problem,
+        priority,
+        images: Array.isArray(images) ? images : [],
+      },
+    });
+
+    req.io.emit("new_ticket", ticket);
+    req.io.to("agents").emit("agent_notification", {
+      type: "ticket_created",
+      ticketId: ticket.id,
+      message: `New ticket #${ticket.id} submitted by ${req.user.name || ticket.name}`,
+    });
+    req.io.to("admins").emit("admin_notification", {
+      type: "ticket_created",
+      ticketId: ticket.id,
+      message: `New ticket #${ticket.id} submitted by ${req.user.name || ticket.name}`,
+    });
+
+    try {
+      const agentTokens = await prisma.notificationToken.findMany({
+        where: { role: "agent" },
+      });
+
+      await cleanupInvalidTokens(
+        prisma,
+        agentTokens,
+        await sendPushNotification(
+          agentTokens.map((token) => token.token),
+          {
+            title: `New ticket #${ticket.id}`,
+            body: `Submitted by ${req.user.name || ticket.name}.`,
+            icon: "/favicon.ico",
+            badge: "/favicon.ico",
+            data: {
+              notificationId: `ticket_created_${ticket.id}`,
+              ticketId: String(ticket.id),
+              clickAction: "/agent",
+              type: "ticket_created",
+            },
+          },
+        ),
+      );
+    } catch (pushError) {
+      console.warn("FCM push failed for new ticket:", pushError);
+    }
+
+    res.status(201).json(ticket);
+  } catch (error) {
+    console.error("POST /tickets error:", error);
+    res.status(500).json({ error: "Could not create ticket" });
+  }
+});
+
+// ─────────────────────────────────────────
+// PATCH /api/tickets/:id
+// Agent claims, updates, or resolves a ticket
+// ─────────────────────────────────────────
+router.patch("/:id", async (req, res) => {
+  const { status, agentId, resolution } = req.body;
+  const ticketId = Number(req.params.id);
+
+  try {
+    const oldTicket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+    });
+
+    const updateData = {};
+    if (status) updateData.status = status;
+    if (agentId) updateData.agentId = agentId;
+    if (resolution) updateData.resolution = resolution;
+
+    if (status === "resolved") {
+      updateData.resolvedAt = new Date();
+    }
+
+    const ticket = await prisma.ticket.update({
+      where: { id: ticketId },
+      data: updateData,
+      include: { agent: { select: { id: true, name: true } } },
+    });
+
+    const statusChanged = oldTicket.status !== ticket.status;
+    if (status === "resolved") {
+      req.io.emit("ticket_resolved", {
+        ticketId: ticket.id,
+        userId: oldTicket.userId,
+        problem: ticket.problem,
+        agentName: ticket.agent?.name || "Support Team",
+      });
+
+      if (oldTicket.userId) {
+        const userTokens = await prisma.notificationToken.findMany({
+          where: { role: "user", userId: oldTicket.userId },
+        });
+
+        await cleanupInvalidTokens(
+          prisma,
+          userTokens,
+          await sendPushNotification(
+            userTokens.map((token) => token.token),
+            {
+              title: `Ticket #${ticket.id} resolved`,
+              body: `Your ticket has been resolved by ${ticket.agent?.name || "support"}.`,
+              icon: "/favicon.ico",
+              badge: "/favicon.ico",
+              data: {
+                notificationId: `ticket_resolved_${ticket.id}`,
+                ticketId: String(ticket.id),
+                clickAction: `/ticket/${ticket.id}`,
+                type: "ticket_resolved",
+              },
+            },
+          ),
+        );
+      }
+    } else if (statusChanged && ticket.userId) {
+      const friendlyStatus =
+        ticket.status === "in_progress"
+          ? "in progress"
+          : ticket.status === "open"
+            ? "open"
+            : ticket.status;
+
+      req.io.emit("user_notification", {
+        type: "ticket_status",
+        ticketId: ticket.id,
+        userId: ticket.userId,
+        message: `Your ticket #${ticket.id} is now ${friendlyStatus}.`,
+      });
+
+      const userTokens = await prisma.notificationToken.findMany({
+        where: { role: "user", userId: ticket.userId },
+      });
+
+      await cleanupInvalidTokens(
+        prisma,
+        userTokens,
+        await sendPushNotification(
+          userTokens.map((token) => token.token),
+          {
+            title: `Ticket #${ticket.id} updated`,
+            body: `Your ticket status changed to ${friendlyStatus}.`,
+            icon: "/favicon.ico",
+            badge: "/favicon.ico",
+            data: {
+              notificationId: `ticket_status_${ticket.id}`,
+              ticketId: String(ticket.id),
+              clickAction: `/ticket/${ticket.id}`,
+              type: "ticket_status",
+            },
+          },
+        ),
+      );
+    }
+
+    req.io.emit("ticket_updated", ticket);
+
+    res.json(ticket);
+  } catch (error) {
+    console.error("PATCH /tickets/:id error:", error);
+    res.status(500).json({ error: "Could not update ticket" });
+  }
+});
+
+// ─────────────────────────────────────────
+// DELETE /api/tickets/:id
+// Admin only — permanently removes a ticket
+// ─────────────────────────────────────────
+router.delete("/:id", async (req, res) => {
+  const ticketId = Number(req.params.id);
+
+  try {
+    await prisma.ticket.delete({
+      where: { id: ticketId },
+    });
+
+    req.io.emit("ticket_deleted", { id: ticketId });
+
+    res.json({ message: "Ticket deleted successfully" });
+  } catch (error) {
+    console.error("DELETE /tickets/:id error:", error);
+    res.status(500).json({ error: "Could not delete ticket" });
+  }
+});
+
+module.exports = router;
+
+
+===== FILE: C:\Users\sola\Desktop\ICT Support Desk\backend\utils\cloudinary.js =====
+
+const cloudinary = require("cloudinary").v2;
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+// Upload image to Cloudinary and return URL
+async function uploadImage(dataURI, ticketId) {
+  try {
+    const result = await cloudinary.uploader.upload(dataURI.trim(), {
+      folder: "ict-support-desk/tickets",
+      public_id: `ticket-${ticketId}-${Date.now()}`,
+      resource_type: "auto",
+      quality: "auto", // Auto-compress
+      fetch_format: "auto", // Auto-format (WebP, etc.)
+      flags: "progressive", // Progressive JPEG
+      timeout: 120000,
+      chunk_size: 6000000,
+    });
+
+    return result.secure_url;
+  } catch (error) {
+    console.error("Cloudinary upload error:", error);
+    throw new Error("Failed to upload image to Cloudinary");
+  }
+}
+
+module.exports = { uploadImage, cloudinary };
+
+
+===== FILE: C:\Users\sola\Desktop\ICT Support Desk\backend\utils\fcm.js =====
+
+
+
+===== FILE: C:\Users\sola\Desktop\ICT Support Desk\backend\seed.js =====
+
+const { PrismaClient } = require('@prisma/client')
+const bcrypt = require('bcryptjs')
+
+const prisma = new PrismaClient()
+
+async function main() {
+  // Check if admin already exists
+  const existing = await prisma.admin.findFirst()
+  if (existing) {
+    console.log('Admin already exists — skipping seed')
+    return
+  }
+
+  const hashed = await bcrypt.hash('adminbaba@123', 10)
+
+  await prisma.admin.create({
+    data: {
+      username: 'admin',
+      password: hashed
+    }
+  })
+
+  console.log('✅ Admin created!')
+  console.log('   Username: admin')
+  console.log('   Password: adminbaba@123')
+  console.log('   ⚠️  Change this password after first login!')
+}
+
+main()
+  .catch(console.error)
+  .finally(() => prisma.$disconnect())
+
+  
+
+
+===== FILE: C:\Users\sola\Desktop\ICT Support Desk\backend\server.js =====
+
+const express = require("express");
+const cors = require("cors");
+const http = require("http");
+const { Server } = require("socket.io");
+const jwt = require("jsonwebtoken");
+require("dotenv").config();
+
+const isProduction = process.env.NODE_ENV === "production";
+if (!isProduction && process.env.DATABASE_URL_LOCAL) {
+  process.env.DATABASE_URL = process.env.DATABASE_URL_LOCAL;
+}
+
+const ticketRoutes = require("./routes/tickets");
+const authRoutes = require("./routes/auth");
+const agentRoutes = require("./routes/agents");
+const messageRoutes = require("./routes/messages");
+const imageRoutes = require("./routes/images");
+const notificationRoutes = require("./routes/notifications");
+
+const app = express();
+const server = http.createServer(app);
+
+// Allow configurable client origins (comma-separated in env)
+const clientOrigins = (
+  process.env.CLIENT_URLS ||
+  process.env.CLIENT_URL ||
+  "http://localhost:5173"
+)
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+const io = new Server(server, {
+  cors: {
+    origin: clientOrigins,
+    methods: ["GET", "POST"],
+    credentials: true,
+    allowEIO3: true,
+  },
+  transports: ["websocket", "polling"],
+  pingInterval: 25000,
+  pingTimeout: 60000,
+});
+
+// Attach io to every request
+app.use((req, res, next) => {
+  req.io = io;
+  next();
+});
+
+const allowedOrigins = clientOrigins;
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+  }),
+);
+app.use(express.json({ limit: "2mb" }));
+app.use(express.urlencoded({ limit: "2mb", extended: true }));
+
+// ─── Routes ───────────────────────────────
+app.use("/api/auth", authRoutes);
+app.use("/api/agents", agentRoutes);
+app.use("/api/tickets", ticketRoutes);
+app.use("/api/messages", messageRoutes);
+app.use("/api/images", imageRoutes);
+app.use("/api/notifications", notificationRoutes);
+
+app.get("/", (req, res) => {
+  res.json({ message: "ICT Support Desk API running ✅" });
+});
+
+io.use((socket, next) => {
+  const token =
+    socket.handshake.auth?.token || socket.handshake.query?.token || null;
+
+  if (!token) {
+    return next();
+  }
+
+  try {
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET || "ict_support_secret_key",
+    );
+    socket.data.userInfo = decoded;
+    return next();
+  } catch (error) {
+    console.warn("Socket auth failed:", error.message);
+    return next();
+  }
+});
+
+io.on("connection", (socket) => {
+  const auth = socket.data.userInfo;
+  console.log(
+    `Connected: ${socket.id}`,
+    auth ? `${auth.role}:${auth.id}` : "anonymous",
+  );
+
+  if (auth) {
+    socket.join(`${auth.role}s`);
+    socket.join(`${auth.role}_${auth.id}`);
+  }
+
+  socket.on("disconnect", () => {
+    console.log(`Disconnected: ${socket.id}`);
+  });
+});
+
+const PORT = process.env.PORT || 5000;
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`\n✅ Server running on http://localhost:${PORT}`);
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`📡 Dev frontend: http://localhost:5173`);
+  }
+});
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Admin ────────────────────────────────
+// Only one admin exists — created via seed
+model Admin {
+  id        Int      @id @default(autoincrement())
+  username  String   @unique
+  password  String   // bcrypt hashed
+  createdAt DateTime @default(now())
+}
+
+// ─── Agent ────────────────────────────────
+// Registered by admin — has name + password
+model Agent {
+  id                 Int                 @id @default(autoincrement())
+  name               String
+  username           String              @unique
+  password           String              // bcrypt hashed
+  isActive           Boolean             @default(true)
+  createdAt          DateTime            @default(now())
+  tickets            Ticket[]
+  messages           Message[]
+  notificationTokens NotificationToken[]
+}
+
+// ─── User ────────────────────────────────
+model User {
+  id                 Int                 @id @default(autoincrement())
+  oracleNumber       String              @unique
+  createdAt          DateTime            @default(now())
+  tickets            Ticket[]
+  notificationTokens NotificationToken[]
+}
+
+// ─── Ticket ───────────────────────────────
+model Ticket {
+  id          Int       @id @default(autoincrement())
+  name        String    // staff member name
+  department  String
+  location    String
+  problem     String
+  priority    String    // high | medium | low
+  status      String    @default("open")
+  resolution  String?
+  resolvedAt  DateTime?
+  images      String[]  @default([])  // base64 encoded images
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  // Which agent claimed this ticket
+  agentId     Int?
+  agent       Agent?    @relation(fields: [agentId], references: [id])
+
+  // Which user submitted this ticket
+  userId      Int?
+  user        User?     @relation(fields: [userId], references: [id])
+
+  // All chat messages for this ticket
+  messages    Message[]
+}
+
+// ─── Message ──────────────────────────────
+// Every chat bubble in a ticket conversation
+model Message {
+  id        Int      @id @default(autoincrement())
+  text      String
+  sender    String   // "user" or "agent"
+  senderName String  // display name
+  createdAt DateTime @default(now())
+
+  ticketId  Int
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  // null if sender is the staff user
+  agentId   Int?
+  agent     Agent?   @relation(fields: [agentId], references: [id])
+}
+
+model NotificationToken {
+  id         Int      @id @default(autoincrement())
+  token      String   @unique
+  platform   String   @default("web")
+  role       String
+  userAgent  String?
+  userId     Int?
+  agentId    Int?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  lastSeenAt DateTime @default(now())
+
+  user       User?    @relation(fields: [userId], references: [id])
+  agent      Agent?   @relation(fields: [agentId], references: [id])
+}
+
+{
+  "name": "ict-support-desk-backend",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "nodemon server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.0.0",
+    "bcryptjs": "^3.0.3",
+    "cloudinary": "^1.40.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.0",
+    "express": "^4.18.0",
+    "express-validator": "^7.3.2",
+    "firebase-admin": "^12.7.0",
+    "jsonwebtoken": "^9.0.3",
+    "socket.io": "^4.7.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0",
+    "prisma": "^5.0.0"
+  }
+}
+
+// This file was generated by Prisma, and assumes you have installed the following:
+// npm install --save-dev prisma dotenv
+import "dotenv/config";
+import { defineConfig } from "prisma/config";
+
+export default defineConfig({
+  schema: "prisma/schema.prisma",
+  migrations: {
+    path: "prisma/migrations",
+  },
+  datasource: {
+    url: process.env["DATABASE_URL"],
+  },
+});
+
+# Backend environment settings for local dev and production
+PORT=5000
+DATABASE_URL=postgresql://user:password@host:5432/dbname
+DATABASE_URL_LOCAL=postgresql://user:password@localhost:5432/dbname
+JWT_SECRET=supersecretkey
+CLIENT_URLS=http://localhost:5173,http://ict.unit
+
+# Firebase service account settings
+FIREBASE_SERVICE_ACCOUNT_PATH=./firebase-service-account.json
+
+
+# Cloudinary Configuration
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
+# CLIENT_URL=https://your-frontend.vercel.app
+
+# Backend
+node_modules/
+.env
+npm-debug.log*
+
+# Prisma
+prisma/dev.db
+
+# Local seed (keep out of VCS)
+seed.js
+node_modules
+# Keep environment variables out of version control
+.env
+
+/generated/prisma
+utils/service-account.json

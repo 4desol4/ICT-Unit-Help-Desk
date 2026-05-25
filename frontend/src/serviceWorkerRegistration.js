@@ -4,14 +4,16 @@ export async function registerServiceWorker() {
   }
 
   try {
+  
     const registration = await navigator.serviceWorker.register(
-      new URL("./firebase-messaging-sw.js", import.meta.url),
-      { type: "module" },
+      "/firebase-messaging-sw.js",
     );
+
+    console.log("[SW] Registered:", registration.scope);
 
     return registration;
   } catch (error) {
-    console.error("Service worker registration failed:", error);
+    console.error("[SW] Registration failed:", error);
     return null;
   }
 }
