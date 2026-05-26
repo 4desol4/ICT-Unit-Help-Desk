@@ -1,66 +1,5 @@
 
 
-===== FILE: C:\Users\sola\Desktop\ICT Support Desk\frontend\public\firebase-messaging-sw.js =====
-
-importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js");
-importScripts("https://www.gstatic.com/firebasejs/10.12.2/firebase-messaging-compat.js");
-
-
-firebase.initializeApp({
-  apiKey:            "AIzaSyBO5J9sOfCkJCqyXs3G47Y_hzqEdi3zNHo",
-  authDomain:        "ict-helpdesk-e983c.firebaseapp.com",
-  projectId:         "ict-helpdesk-e983c",
-  storageBucket:     "ict-helpdesk-e983c.firebasestorage.app",
-  messagingSenderId: "1072899448523",
-  appId:             "1:1072899448523:web:c3da300af9bfc3f845c54e",
-});
-
-const messaging = firebase.messaging();
-
-// ── Background message handler ────────────────────────────────────────────
-messaging.onBackgroundMessage((payload) => {
-  const title = payload.notification?.title || "ICT Help Desk";
-  const options = {
-    body:  payload.notification?.body  || "You have a new notification.",
-    icon:  payload.notification?.icon  || "/favicon.ico",
-    badge: payload.notification?.badge || "/favicon.ico",
-    data: {
-      ...payload.data,
-      click_action: payload.data?.clickAction || "/",
-    },
-    
-    tag: payload.data?.notificationId || title,
-    requireInteraction: false,
-  };
-
-  self.registration.showNotification(title, options);
-});
-
-
-self.addEventListener("notificationclick", (event) => {
-  event.notification.close();
-
-  const clickAction = event.notification.data?.click_action || "/";
-
-  event.waitUntil(
-    self.clients
-      .matchAll({ type: "window", includeUncontrolled: true })
-      .then((clientList) => {
-        const target = new URL(clickAction, self.location.origin).href;
-
-        for (const client of clientList) {
-          const clientUrl = client.url.split("?")[0].split("#")[0];
-          if (clientUrl === target && "focus" in client) {
-            return client.focus();
-          }
-        }
-
-        return self.clients.openWindow(target);
-      }),
-  );
-});
-
-
 ===== FILE: C:\Users\sola\Desktop\ICT Support Desk\frontend\src\components\Navbar.jsx =====
 
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -10209,16 +10148,10 @@ export default function UserTicketChat() {
     setSending(true);
 
     try {
-      const res = await sendUserMessage(ticketId, {
+      await sendUserMessage(ticketId, {
         text,
         senderName: ticket?.name,
       });
-
-      if (res?.data) {
-        setMessages((prev) => [...prev, res.data]);
-
-        setTimeout(() => scrollToBottom(), 100);
-      }
     } catch (err) {
       console.error("Failed to send message", err);
 
@@ -11177,34 +11110,6 @@ registerServiceWorker();
 
 ===== FILE: C:\Users\sola\Desktop\ICT Support Desk\frontend\src\notificationService.js =====
 
-// ===== FILE: frontend/src/notificationService.js =====
-//
-// BUGS FIXED:
-//
-//  1. Permission was requested silently in a useEffect — most browsers
-//     BLOCK notification permission prompts unless triggered by a user
-//     gesture (button click). Silent auto-prompts are rejected, leaving
-//     Notification.permission stuck at "default" forever, which means
-//     initializePushNotifications() exits early and no FCM token is
-//     ever registered.
-//
-//     Fix: requestNotificationPermission() is unchanged (it stays a helper),
-//     but the App.jsx useEffect now calls a new exported function
-//     `askNotificationPermission()` that is intentionally separate so you can
-//     wire it to a "Enable Notifications" button. The silent-init path still
-//     works if permission was already granted from a previous session.
-//
-//  2. getFcmToken() was called before the service worker was ready.
-//     Firebase requires the SW to be in the "activated" state before it can
-//     return a valid token. Added `await registration.update()` + wait for
-//     the "activated" state.
-//
-//  3. The FCM token was registered to /api/notifications/register but the
-//     Authorization header wasn't guaranteed to be set at that point (race
-//     between login and SW init). The api instance now always re-reads from
-//     localStorage via the interceptor so this is fine, but added an explicit
-//     guard just in case.
-
 import api, { getToken as getAuthToken } from "./api";
 import { getToken as getFcmToken, onMessage } from "firebase/messaging";
 import { messaging } from "./firebase";
@@ -11394,22 +11299,41 @@ import { io } from "socket.io-client";
 import { getToken } from "./api";
 
 const socketUrl =
-  __VITE_SOCKET_URL__ ||
-  (window.location.hostname === "localhost" ||
-  window.location.hostname === "127.0.0.1"
-    ? "http://localhost:5000"
-    : window.location.origin);
+  import.meta.env.VITE_SOCKET_URL || "https://ict-unit-help-desk.onrender.com";
+
+console.log("SOCKET URL:", socketUrl);
 
 const socket = io(socketUrl, {
   autoConnect: false,
+
   transports: ["websocket", "polling"],
+
+  withCredentials: true,
+
+  reconnection: true,
+  reconnectionAttempts: Infinity,
+  reconnectionDelay: 1000,
+
+  timeout: 20000,
+
   auth: {
     token: getToken(),
   },
 });
 
+socket.on("connect", () => {
+  console.log("✅ Socket connected:", socket.id);
+});
+
+socket.on("connect_error", (err) => {
+  console.error("❌ Socket connect error:", err.message);
+});
+
 export const connectSocket = () => {
-  socket.auth = { token: getToken() };
+  socket.auth = {
+    token: getToken(),
+  };
+
   if (!socket.connected) {
     socket.connect();
   }
