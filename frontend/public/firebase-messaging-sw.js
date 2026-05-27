@@ -8,7 +8,7 @@ importScripts(
 // ▼▼▼ PASTE YOUR ACTUAL VALUES BELOW — replace every placeholder ▼▼▼
 firebase.initializeApp({
   apiKey: "AIzaSyBO5J9sOfCkJCqyXs3G47Y_hzqEdi3zNHo",
-  authDomain: "Pict-helpdesk-e983c.firebaseapp.com",
+  authDomain: "ict-helpdesk-e983c.firebaseapp.com",
   projectId: "ict-helpdesk-e983c",
   storageBucket: "ict-helpdesk-e983c.firebasestorage.app",
   messagingSenderId: "1072899448523",
