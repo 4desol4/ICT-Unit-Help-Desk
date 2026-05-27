@@ -45,9 +45,12 @@ export default function App() {
 
   // ── Add an in-app toast ────────────────────────────────────────────────────
   const addNotification = useCallback(
-    (message, type = "info", ticketId = null) => {
+    (message, type = "info", ticketId = null, targetPath = null) => {
       const id = `${Date.now()}-${Math.random()}`;
-      setNotifications((prev) => [...prev, { id, message, type, ticketId }]);
+      setNotifications((prev) => [
+        ...prev,
+        { id, message, type, ticketId, targetPath },
+      ]);
       setUnreadCount((v) => v + 1);
       playNotificationTone();
     },
@@ -59,10 +62,20 @@ export default function App() {
   }, []);
 
   const handleNotificationClick = useCallback(
-    (ticketId) => {
-      if (ticketId) navigate(`/ticket/${ticketId}`);
+    (ticketId, targetPath = null) => {
+      const resolvedPath =
+        targetPath ||
+        (user?.role === "agent"
+          ? "/agent"
+          : user?.role === "admin"
+            ? "/admin"
+            : ticketId
+              ? `/ticket/${ticketId}`
+              : null);
+
+      if (resolvedPath) navigate(resolvedPath);
     },
-    [navigate],
+    [navigate, user?.role],
   );
 
   // ── Connect / disconnect socket when user logs in or out ──────────────────
@@ -89,6 +102,7 @@ export default function App() {
           `🎫 New ticket #${data.id} from ${data.name} — ${data.department}`,
           "notification",
           data.id,
+          "/admin",
         );
       }
       if (u.role === "agent") {
@@ -96,6 +110,7 @@ export default function App() {
           `🎫 New ticket #${data.id} arrived in the queue.`,
           "notification",
           data.id,
+          "/agent",
         );
       }
     };
@@ -108,6 +123,7 @@ export default function App() {
         data.message || "New admin notification",
         "notification",
         data.ticketId || null,
+        "/admin",
       );
     };
 
@@ -121,6 +137,7 @@ export default function App() {
         data.message || `New activity on ticket #${data.ticketId}`,
         "message",
         data.ticketId || null,
+        "/agent",
       );
     };
 
@@ -133,6 +150,7 @@ export default function App() {
         `✅ Your ticket has been resolved by ${data.agentName || "support"}.`,
         "success",
         data.ticketId,
+        data.ticketId ? `/ticket/${data.ticketId}` : null,
       );
     };
 
@@ -145,6 +163,7 @@ export default function App() {
         data.message || `Ticket #${data.ticketId} was updated.`,
         "message",
         data.ticketId || null,
+        data.ticketId ? `/ticket/${data.ticketId}` : null,
       );
     };
 
@@ -167,13 +186,35 @@ export default function App() {
     // addNotification is stable (useCallback with no deps) so this runs once
   }, [addNotification]);
 
-  // ── Firebase push: init silently if permission already granted ────────────
+  // ── Firebase push: auto-request & register on login ────────────────────
   useEffect(() => {
     if (!user || !isPushSupported()) return;
-    if (Notification.permission === "granted") {
-      setNotifPermission("granted");
-      initializePushNotifications().catch(console.warn);
-    }
+
+    (async () => {
+      const current = Notification.permission;
+
+      // Already granted — register immediately
+      if (current === "granted") {
+        setNotifPermission("granted");
+        await initializePushNotifications().catch(console.warn);
+      }
+      // Not yet asked — request silently (no blocking UI)
+      else if (current === "default") {
+        try {
+          const result = await Notification.requestPermission();
+          setNotifPermission(result);
+          if (result === "granted") {
+            await initializePushNotifications().catch(console.warn);
+          }
+        } catch (err) {
+          console.warn("[Push] Auto-request failed:", err.message);
+        }
+      }
+      // Denied — user must manually enable in browser settings
+      else {
+        setNotifPermission("denied");
+      }
+    })();
   }, [user]);
 
   // ── Firebase push: foreground messages → in-app toast ────────────────────
@@ -182,9 +223,16 @@ export default function App() {
       const ticketId = payload?.data?.ticketId
         ? Number(payload.data.ticketId)
         : null;
+      const targetPath =
+        payload?.data?.clickAction || payload?.data?.click_action || null;
       const title = payload.notification?.title || "Help Desk";
       const body = payload.notification?.body || "You have a new notification.";
-      addNotification(`${title}: ${body}`, "notification", ticketId);
+      addNotification(
+        `${title}: ${body}`,
+        "notification",
+        ticketId,
+        targetPath,
+      );
     });
     return () => {
       if (typeof unsubscribe === "function") unsubscribe();
@@ -322,7 +370,7 @@ export default function App() {
             message={n.message}
             type={n.type}
             onClose={() => removeNotification(n.id)}
-            onClick={() => handleNotificationClick(n.ticketId)}
+            onClick={() => handleNotificationClick(n.ticketId, n.targetPath)}
           />
         </div>
       ))}
