@@ -42,47 +42,71 @@ export const playNotificationTone = () => {
 
 // ── Register service worker ───────────────────────────────────────────────────
 async function getSWRegistration() {
-  if (!("serviceWorker" in navigator)) return null;
+  if (!("serviceWorker" in navigator)) {
+    console.log("[SW] Service Worker API not available");
+    return null;
+  }
   try {
+    console.log("[SW] Checking for existing registration...");
+
     // Reuse existing registration if already registered
     const existing = await navigator.serviceWorker.getRegistration(
       "/firebase-messaging-sw.js",
     );
     if (existing) {
+      console.log("[SW] ✅ Found existing registration, updating...");
       await existing.update(); // pick up any new SW version
       return existing;
     }
+
+    console.log("[SW] No existing registration, registering new SW...");
     const reg = await navigator.serviceWorker.register(
       "/firebase-messaging-sw.js",
       { scope: "/" },
       // No { type: "module" } — SW uses importScripts (classic mode)
     );
-    console.log("[SW] Registered, scope:", reg.scope);
+    console.log("[SW] ✅ Registered, scope:", reg.scope);
     return reg;
   } catch (err) {
-    console.error("[SW] Registration failed:", err.message);
+    console.error("[SW] ❌ Registration failed:", err.message);
     return null;
   }
 }
 
 // Wait until the SW is active before asking Firebase for a token
 async function waitForSWActive(reg, timeoutMs = 12000) {
-  if (reg.active) return true;
+  if (!reg) {
+    console.warn("[SW] No registration provided");
+    return false;
+  }
+
+  if (reg.active) {
+    console.log("[SW] ✅ SW already active");
+    return true;
+  }
+
+  console.log("[SW] ⏳ Waiting for SW to become active...");
+
   return new Promise((resolve) => {
     const timer = setTimeout(() => {
-      console.warn("[SW] Activation timeout — proceeding anyway");
+      console.warn("[SW] ⚠️  Activation timeout — proceeding anyway");
       resolve(false);
     }, timeoutMs);
 
     const worker = reg.installing || reg.waiting;
     if (!worker) {
+      console.warn("[SW] No installing or waiting worker found");
       clearTimeout(timer);
       resolve(false);
       return;
     }
 
+    console.log("[SW] Found worker, waiting for activation...");
+
     worker.addEventListener("statechange", function h() {
+      console.log("[SW] Worker state changed to:", worker.state);
       if (worker.state === "activated") {
+        console.log("[SW] ✅ SW now active!");
         clearTimeout(timer);
         worker.removeEventListener("statechange", h);
         resolve(true);
@@ -150,6 +174,10 @@ export async function initializePushNotifications() {
     });
 
     console.log("[Push] ✅ Token registered with backend.");
+    console.log(
+      "[Push] 🎉 Push notifications fully initialized!",
+      "Background messages will show as OS notifications when app is closed/minimized.",
+    );
     return fcmToken;
   } catch (err) {
     console.error(
