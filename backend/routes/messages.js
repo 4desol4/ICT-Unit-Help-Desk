@@ -138,7 +138,7 @@ router.post("/:ticketId/agent", agentAuth, async (req, res) => {
       });
 
       console.log(
-        `[Messages] Agent message on #${ticketId}: found ${userTokens.length} user token(s) for user ${ticket.userId}`,
+        `[Messages] Agent message on #${ticketId}: found ${userTokens.length} user token(s) for user ${ticket.userId}. Ticket owner userId=${ticket.userId}, role=user.`,
       );
 
       if (userTokens.length > 0) {

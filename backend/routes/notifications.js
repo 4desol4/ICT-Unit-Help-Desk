@@ -18,6 +18,10 @@ router.post("/register", async (req, res) => {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
+  console.log(
+    `[Notifications] 🔔 Register attempt: role=${auth.role}, id=${auth.id}, platform=${platform}, tokenPrefix=${token.substring(0, 12)}…`,
+  );
+
   const record = {
     token,
     platform,
