@@ -117,18 +117,28 @@ async function waitForSWActive(reg, timeoutMs = 12000) {
 
 // ── Main: get FCM token & register with backend ───────────────────────────────
 export async function initializePushNotifications() {
+  console.log("[Push] initializePushNotifications started");
+
   if (!isPushSupported()) {
     console.log("[Push] Push not supported in this browser.");
     return null;
   }
+
+  console.log("[Push] Notification permission:", Notification.permission);
+
   if (Notification.permission !== "granted") {
     console.log("[Push] Permission not granted — skipping.");
     return null;
   }
-  if (!getAuthToken()) {
+
+  const authToken = getAuthToken();
+  console.log("[Push] Auth token present:", Boolean(authToken));
+
+  if (!authToken) {
     console.warn("[Push] No auth token — user not logged in.");
     return null;
   }
+
   if (!firebaseVapidKey) {
     console.error(
       "[Push] VITE_FIREBASE_VAPID_KEY is missing.\n" +
@@ -139,7 +149,14 @@ export async function initializePushNotifications() {
   }
 
   try {
+    console.log("[Push] Fetching or registering service worker...");
     const reg = await getSWRegistration();
+    console.log(
+      "[Push] SW registration result:",
+      Boolean(reg),
+      reg?.scope || null,
+    );
+
     if (!reg) {
       console.error("[Push] SW registration failed.");
       return null;
@@ -147,6 +164,7 @@ export async function initializePushNotifications() {
 
     await waitForSWActive(reg);
 
+    console.log("[Push] Requesting FCM token...");
     const fcmToken = await getFcmToken(messaging, {
       vapidKey: firebaseVapidKey,
       serviceWorkerRegistration: reg,
@@ -165,7 +183,8 @@ export async function initializePushNotifications() {
 
     console.log("[Push] FCM token:", fcmToken.substring(0, 20) + "…");
 
-    await api.post("/notifications/register", {
+    console.log("[Push] Registering token with backend...");
+    const registerResponse = await api.post("/notifications/register", {
       token: fcmToken,
       platform: /Mobi|Android/i.test(navigator.userAgent)
         ? "mobile-web"
@@ -173,6 +192,11 @@ export async function initializePushNotifications() {
       userAgent: navigator.userAgent,
     });
 
+    console.log(
+      "[Push] Backend registration response:",
+      registerResponse?.status,
+      registerResponse?.data,
+    );
     console.log("[Push] ✅ Token registered with backend.");
     console.log(
       "[Push] 🎉 Push notifications fully initialized!",
