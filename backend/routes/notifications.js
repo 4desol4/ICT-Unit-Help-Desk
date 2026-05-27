@@ -44,17 +44,29 @@ router.post("/register", async (req, res) => {
     console.log(
       `[Notifications] ✅ Token registered: ${auth.role} (${auth.id}) on ${platform}`,
     );
-    res.json({ success: true });
+    return res.json({ success: true });
   } catch (error) {
     console.error("[Notifications] Register error:", error);
+    return res.status(500).json({ error: "Could not register push token." });
+  }
+});
+
+router.delete("/unregister", async (req, res) => {
+  const { token } = req.body;
+
+  if (!token) {
+    return res.status(400).json({ error: "Notification token is required." });
   }
 
   try {
     await prisma.notificationToken.deleteMany({ where: { token } });
-    res.json({ success: true });
+    console.log(
+      `[Notifications] 🗑️  Token unregistered: ${token.substring(0, 20)}…`,
+    );
+    return res.json({ success: true });
   } catch (error) {
-    console.error("DELETE /notifications/unregister error:", error);
-    res.status(500).json({ error: "Could not unregister push token." });
+    console.error("[Notifications] Unregister error:", error);
+    return res.status(500).json({ error: "Could not unregister push token." });
   }
 });
 
