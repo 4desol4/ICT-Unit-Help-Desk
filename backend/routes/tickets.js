@@ -140,6 +140,10 @@ router.post("/", userAuth, ticketValidation, async (req, res) => {
         where: { role: "agent" },
       });
 
+      console.log(
+        `[Tickets] New ticket #${ticket.id}: found ${agentTokens.length} agent token(s)`,
+      );
+
       if (agentTokens.length > 0) {
         await cleanupInvalidTokens(
           prisma,
@@ -160,15 +164,26 @@ router.post("/", userAuth, ticketValidation, async (req, res) => {
             },
           ),
         );
+      } else {
+        console.warn(
+          `[Tickets] ⚠️  No agent tokens found - agents won't receive notification`,
+        );
       }
     } catch (pushError) {
-      console.warn("FCM push failed for agents (new ticket):", pushError);
+      console.warn(
+        "FCM push failed for agents (new ticket):",
+        pushError.message,
+      );
     }
 
     try {
       const adminTokens = await prisma.notificationToken.findMany({
         where: { role: "admin" },
       });
+
+      console.log(
+        `[Tickets] New ticket #${ticket.id}: found ${adminTokens.length} admin token(s)`,
+      );
 
       if (adminTokens.length > 0) {
         await cleanupInvalidTokens(
@@ -190,9 +205,16 @@ router.post("/", userAuth, ticketValidation, async (req, res) => {
             },
           ),
         );
+      } else {
+        console.warn(
+          `[Tickets] ⚠️  No admin tokens found - admins won't receive notification`,
+        );
       }
     } catch (pushError) {
-      console.warn("FCM push failed for admins (new ticket):", pushError);
+      console.warn(
+        "FCM push failed for admins (new ticket):",
+        pushError.message,
+      );
     }
 
     res.status(201).json(ticket);

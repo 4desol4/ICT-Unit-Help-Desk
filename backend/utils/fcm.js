@@ -99,7 +99,10 @@ async function sendPushNotification(tokens, payload) {
   }
 
   const validTokens = (tokens || []).filter(Boolean);
-  if (validTokens.length === 0) return [];
+  if (validTokens.length === 0) {
+    console.warn("[FCM] No valid tokens provided for push.");
+    return [];
+  }
 
   const { title, body, icon, badge, data = {} } = payload;
 
@@ -127,6 +130,7 @@ async function sendPushNotification(tokens, payload) {
   };
 
   try {
+    console.log("[FCM] Sending push to", validTokens.length, "token(s)...");
     const response = await admin.messaging().sendEachForMulticast(message);
     const results = response.responses.map((r, i) => ({
       token: validTokens[i],
@@ -137,17 +141,24 @@ async function sendPushNotification(tokens, payload) {
     const ok = results.filter((r) => r.success).length;
     const failed = results.filter((r) => !r.success);
     console.log(
-      "[FCM] Push sent: " + ok + "/" + validTokens.length + " succeeded.",
+      "[FCM] ✅ Push delivery: " +
+        ok +
+        "/" +
+        validTokens.length +
+        " succeeded.",
     );
     if (failed.length > 0) {
       console.warn(
-        "[FCM] Failed tokens:",
-        failed.map((f) => f.error),
+        "[FCM] ❌ Failed tokens (" + failed.length + "):",
+        failed.map((f) => ({
+          token: f.token.substring(0, 20) + "…",
+          error: f.error,
+        })),
       );
     }
     return results;
   } catch (err) {
-    console.error("[FCM] sendEachForMulticast error:", err.message);
+    console.error("[FCM] ❌ sendEachForMulticast error:", err.message);
     return validTokens.map((token) => ({
       token,
       success: false,

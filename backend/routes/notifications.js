@@ -4,19 +4,20 @@ const { parseToken } = require("../middleware/auth");
 
 const prisma = new PrismaClient();
 const router = express.Router();
- 
+
 router.post("/register", async (req, res) => {
   const { token, platform = "web", userAgent } = req.body;
- 
+
   if (!token) {
     return res.status(400).json({ error: "Notification token is required." });
   }
- 
+
   const auth = parseToken(req.headers.authorization);
   if (!auth) {
+    console.warn("[Notifications] Register attempt without auth");
     return res.status(401).json({ error: "Unauthorized" });
   }
- 
+
   const record = {
     token,
     platform,
@@ -24,36 +25,30 @@ router.post("/register", async (req, res) => {
     role: auth.role,
     lastSeenAt: new Date(),
   };
- 
+
   if (auth.role === "user") {
     record.userId = auth.id;
   }
- 
+
   if (auth.role === "agent") {
     record.agentId = auth.id;
   }
- 
+
   try {
     await prisma.notificationToken.upsert({
       where: { token },
       create: record,
       update: { ...record, updatedAt: new Date() },
     });
- 
+
+    console.log(
+      `[Notifications] ✅ Token registered: ${auth.role} (${auth.id}) on ${platform}`,
+    );
     res.json({ success: true });
   } catch (error) {
-    console.error("POST /notifications/register error:", error);
-    res.status(500).json({ error: "Could not register push token." });
+    console.error("[Notifications] Register error:", error);
   }
-});
- 
-router.delete("/unregister", async (req, res) => {
-  const { token } = req.body;
- 
-  if (!token) {
-    return res.status(400).json({ error: "Notification token is required." });
-  }
- 
+
   try {
     await prisma.notificationToken.deleteMany({ where: { token } });
     res.json({ success: true });
@@ -62,6 +57,5 @@ router.delete("/unregister", async (req, res) => {
     res.status(500).json({ error: "Could not unregister push token." });
   }
 });
- 
+
 module.exports = router;
- 

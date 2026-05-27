@@ -59,25 +59,35 @@ router.post("/:ticketId/user", userAuth, async (req, res) => {
         where: { role: "agent", agentId: ticket.agentId },
       });
 
-      await cleanupInvalidTokens(
-        prisma,
-        agentTokens,
-        await sendPushNotification(
-          agentTokens.map((token) => token.token),
-          {
-            title: `Ticket #${ticketId} update`,
-            body: `New message from ${req.user.name || ticket.name}`,
-            icon: "/favicon.ico",
-            badge: "/favicon.ico",
-            data: {
-              notificationId: `agent_message_${ticketId}`,
-              ticketId: String(ticketId),
-              clickAction: `/agent`,
-              type: "new_message",
-            },
-          },
-        ),
+      console.log(
+        `[Messages] User message on #${ticketId}: found ${agentTokens.length} agent token(s) for agent ${ticket.agentId}`,
       );
+
+      if (agentTokens.length > 0) {
+        await cleanupInvalidTokens(
+          prisma,
+          agentTokens,
+          await sendPushNotification(
+            agentTokens.map((token) => token.token),
+            {
+              title: `Ticket #${ticketId} update`,
+              body: `New message from ${req.user.name || ticket.name}`,
+              icon: "/favicon.ico",
+              badge: "/favicon.ico",
+              data: {
+                notificationId: `agent_message_${ticketId}`,
+                ticketId: String(ticketId),
+                clickAction: `/agent`,
+                type: "new_message",
+              },
+            },
+          ),
+        );
+      } else {
+        console.warn(
+          `[Messages] ⚠️  No agent tokens for agent ${ticket.agentId} - notification won't be delivered`,
+        );
+      }
     }
 
     res.status(201).json(message);
@@ -127,25 +137,35 @@ router.post("/:ticketId/agent", agentAuth, async (req, res) => {
         where: { role: "user", userId: ticket.userId },
       });
 
-      await cleanupInvalidTokens(
-        prisma,
-        userTokens,
-        await sendPushNotification(
-          userTokens.map((token) => token.token),
-          {
-            title: `Response on ticket #${ticketId}`,
-            body: `Agent ${req.agent.name} replied to your ticket.`,
-            icon: "/favicon.ico",
-            badge: "/favicon.ico",
-            data: {
-              notificationId: `user_message_${ticketId}`,
-              ticketId: String(ticketId),
-              clickAction: `/ticket/${ticketId}`,
-              type: "new_message",
-            },
-          },
-        ),
+      console.log(
+        `[Messages] Agent message on #${ticketId}: found ${userTokens.length} user token(s) for user ${ticket.userId}`,
       );
+
+      if (userTokens.length > 0) {
+        await cleanupInvalidTokens(
+          prisma,
+          userTokens,
+          await sendPushNotification(
+            userTokens.map((token) => token.token),
+            {
+              title: `Response on ticket #${ticketId}`,
+              body: `Agent ${req.agent.name} replied to your ticket.`,
+              icon: "/favicon.ico",
+              badge: "/favicon.ico",
+              data: {
+                notificationId: `user_message_${ticketId}`,
+                ticketId: String(ticketId),
+                clickAction: `/ticket/${ticketId}`,
+                type: "new_message",
+              },
+            },
+          ),
+        );
+      } else {
+        console.warn(
+          `[Messages] ⚠️  No user tokens for user ${ticket.userId} - notification won't be delivered`,
+        );
+      }
     }
 
     res.status(201).json(message);
