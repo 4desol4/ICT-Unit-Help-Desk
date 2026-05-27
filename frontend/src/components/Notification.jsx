@@ -13,8 +13,18 @@ export default function Notification({
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
+    console.log("[Notification] 🎨 Component rendered:", {
+      message,
+      type,
+      duration,
+      visible,
+    });
+  }, [message, type, duration, visible]);
+
+  useEffect(() => {
     if (duration > 0) {
       const timer = setTimeout(() => {
+        console.log("[Notification] ⏰ Duration elapsed, fading out...");
         setVisible(false);
         setTimeout(onClose, 300); // Allow fade out animation
       }, duration);
@@ -48,7 +58,12 @@ export default function Notification({
     }
   };
 
-  if (!visible) return null;
+  if (!visible) {
+    console.log("[Notification] 👻 Not visible, returning null");
+    return null;
+  }
+
+  console.log("[Notification] ✅ Rendering notification UI");
 
   return (
     <div

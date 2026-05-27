@@ -1,6 +1,9 @@
-// frontend/src/notificationService.js
 import api, { getToken as getAuthToken } from "./api";
-import { getToken as getFcmToken, onMessage, deleteToken } from "firebase/messaging";
+import {
+  getToken as getFcmToken,
+  onMessage,
+  deleteToken,
+} from "firebase/messaging";
 import { messaging } from "./firebase";
 import { firebaseVapidKey } from "./firebase-config";
 
@@ -22,8 +25,8 @@ export const requestNotificationPermission = async () => {
 // ── Tone ──────────────────────────────────────────────────────────────────────
 export const playNotificationTone = () => {
   try {
-    const ctx  = new (window.AudioContext || window.webkitAudioContext)();
-    const osc  = ctx.createOscillator();
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = "sine";
     osc.frequency.setValueAtTime(520, ctx.currentTime);
@@ -72,7 +75,11 @@ async function waitForSWActive(reg, timeoutMs = 12000) {
     }, timeoutMs);
 
     const worker = reg.installing || reg.waiting;
-    if (!worker) { clearTimeout(timer); resolve(false); return; }
+    if (!worker) {
+      clearTimeout(timer);
+      resolve(false);
+      return;
+    }
 
     worker.addEventListener("statechange", function h() {
       if (worker.state === "activated") {
@@ -101,15 +108,18 @@ export async function initializePushNotifications() {
   if (!firebaseVapidKey) {
     console.error(
       "[Push] VITE_FIREBASE_VAPID_KEY is missing.\n" +
-      "  → Add it in Vercel Dashboard → Settings → Environment Variables\n" +
-      "  → Then redeploy so Vite bakes it into the build.",
+        "  → Add it in Vercel Dashboard → Settings → Environment Variables\n" +
+        "  → Then redeploy so Vite bakes it into the build.",
     );
     return null;
   }
 
   try {
     const reg = await getSWRegistration();
-    if (!reg) { console.error("[Push] SW registration failed."); return null; }
+    if (!reg) {
+      console.error("[Push] SW registration failed.");
+      return null;
+    }
 
     await waitForSWActive(reg);
 
@@ -121,10 +131,10 @@ export async function initializePushNotifications() {
     if (!fcmToken) {
       console.error(
         "[Push] FCM returned no token. Check:\n" +
-        "  1. VITE_FIREBASE_VAPID_KEY is correct\n" +
-        "  2. firebase-messaging-sw.js has your real Firebase config (not placeholders)\n" +
-        "  3. You are on HTTPS (required for push — localhost is the only exception)\n" +
-        "  4. The SW is active: DevTools → Application → Service Workers",
+          "  1. VITE_FIREBASE_VAPID_KEY is correct\n" +
+          "  2. firebase-messaging-sw.js has your real Firebase config (not placeholders)\n" +
+          "  3. You are on HTTPS (required for push — localhost is the only exception)\n" +
+          "  4. The SW is active: DevTools → Application → Service Workers",
       );
       return null;
     }
@@ -132,15 +142,20 @@ export async function initializePushNotifications() {
     console.log("[Push] FCM token:", fcmToken.substring(0, 20) + "…");
 
     await api.post("/notifications/register", {
-      token:     fcmToken,
-      platform:  /Mobi|Android/i.test(navigator.userAgent) ? "mobile-web" : "web",
+      token: fcmToken,
+      platform: /Mobi|Android/i.test(navigator.userAgent)
+        ? "mobile-web"
+        : "web",
       userAgent: navigator.userAgent,
     });
 
     console.log("[Push] ✅ Token registered with backend.");
     return fcmToken;
   } catch (err) {
-    console.error("[Push] initializePushNotifications error:", err?.message || err);
+    console.error(
+      "[Push] initializePushNotifications error:",
+      err?.message || err,
+    );
     return null;
   }
 }
@@ -149,20 +164,42 @@ export async function initializePushNotifications() {
 // Firebase does NOT show a native OS notification when the tab is open — we
 // handle it here and pass it to App.jsx which renders the in-app toast.
 export function listenFirebaseMessages(onPayload) {
-  if (!isPushSupported()) return () => {};
+  if (!isPushSupported()) {
+    console.log("[Push] Push not supported—skipping foreground listener");
+    return () => {};
+  }
+
+  console.log("[Push] Setting up foreground message listener...");
 
   return onMessage(messaging, (payload) => {
-    if (!payload) return;
+    console.log("[Push] 📬 Foreground message received:", payload);
+
+    if (!payload) {
+      console.warn("[Push] Payload is null/empty");
+      return;
+    }
 
     // Deduplicate
     const id =
       payload.data?.notificationId ||
       `${payload.notification?.title}-${payload.notification?.body}`;
-    if (shownNotificationIds.has(id)) return;
+
+    console.log("[Push] Message ID:", id);
+
+    if (shownNotificationIds.has(id)) {
+      console.warn(
+        "[Push] ⏭️  Message already shown recently—skipping duplicate",
+      );
+      return;
+    }
+
     shownNotificationIds.add(id);
     setTimeout(() => shownNotificationIds.delete(id), 30000);
 
+    console.log("[Push] 🔔 Playing notification tone...");
     playNotificationTone();
+
+    console.log("[Push] 📨 Calling onPayload callback...");
     onPayload(payload);
   });
 }
@@ -180,7 +217,9 @@ export async function unregisterPushNotifications() {
     }).catch(() => null);
     if (token) {
       await deleteToken(messaging).catch(() => {});
-      await api.delete("/notifications/unregister", { data: { token } }).catch(() => {});
+      await api
+        .delete("/notifications/unregister", { data: { token } })
+        .catch(() => {});
     }
   } catch {
     // best effort

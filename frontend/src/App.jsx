@@ -47,10 +47,21 @@ export default function App() {
   const addNotification = useCallback(
     (message, type = "info", ticketId = null, targetPath = null) => {
       const id = `${Date.now()}-${Math.random()}`;
-      setNotifications((prev) => [
-        ...prev,
-        { id, message, type, ticketId, targetPath },
-      ]);
+      console.log("[Toast] 🍞 Adding notification to state:", {
+        id,
+        message,
+        type,
+        ticketId,
+        targetPath,
+      });
+      setNotifications((prev) => {
+        const updated = [...prev, { id, message, type, ticketId, targetPath }];
+        console.log(
+          "[Toast] 📊 Notifications state updated. Count:",
+          updated.length,
+        );
+        return updated;
+      });
       setUnreadCount((v) => v + 1);
       playNotificationTone();
     },
@@ -58,6 +69,7 @@ export default function App() {
   );
 
   const removeNotification = useCallback((id) => {
+    console.log("[Toast] ✂️  Removing notification:", id);
     setNotifications((prev) => prev.filter((n) => n.id !== id));
   }, []);
 
@@ -73,6 +85,10 @@ export default function App() {
               ? `/ticket/${ticketId}`
               : null);
 
+      console.log(
+        "[Toast] 👆 Notification clicked. Navigating to:",
+        resolvedPath,
+      );
       if (resolvedPath) navigate(resolvedPath);
     },
     [navigate, user?.role],
@@ -219,7 +235,11 @@ export default function App() {
 
   // ── Firebase push: foreground messages → in-app toast ────────────────────
   useEffect(() => {
+    console.log("[Toast] Setting up Firebase foreground listener...");
+
     const unsubscribe = listenFirebaseMessages((payload) => {
+      console.log("[Toast] 🔥 Firebase foreground payload received:", payload);
+
       const ticketId = payload?.data?.ticketId
         ? Number(payload.data.ticketId)
         : null;
@@ -227,6 +247,9 @@ export default function App() {
         payload?.data?.clickAction || payload?.data?.click_action || null;
       const title = payload.notification?.title || "Help Desk";
       const body = payload.notification?.body || "You have a new notification.";
+
+      console.log("[Toast] Extracted:", { ticketId, targetPath, title, body });
+
       addNotification(
         `${title}: ${body}`,
         "notification",
@@ -234,7 +257,9 @@ export default function App() {
         targetPath,
       );
     });
+
     return () => {
+      console.log("[Toast] Cleaning up Firebase foreground listener...");
       if (typeof unsubscribe === "function") unsubscribe();
     };
   }, [addNotification]);
