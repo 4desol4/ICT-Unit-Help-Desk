@@ -14,21 +14,21 @@ router.post("/send-notification", agentAuth, async (req, res) => {
 
   if (!recipientRole || !recipientId) {
     return res.status(400).json({
-      error: "recipientRole and recipientId required. Example: { recipientRole: 'user', recipientId: 8 }",
+      error:
+        "recipientRole and recipientId required. Example: { recipientRole: 'user', recipientId: 8 }",
     });
   }
 
-  console.log(
-    `[TEST] /test/send-notification called by agent ${req.agent.id}`,
-  );
-  console.log(
-    `[TEST] Sending to ${recipientRole} ${recipientId}`,
-  );
+  console.log(`[TEST] /test/send-notification called by agent ${req.agent.id}`);
+  console.log(`[TEST] Sending to ${recipientRole} ${recipientId}`);
 
   try {
     // Find tokens for the recipient
     const tokens = await prisma.notificationToken.findMany({
-      where: { role: recipientRole, [recipientRole === 'user' ? 'userId' : 'agentId']: Number(recipientId) },
+      where: {
+        role: recipientRole,
+        [recipientRole === "user" ? "userId" : "agentId"]: Number(recipientId),
+      },
       select: { token: true },
     });
 
@@ -52,16 +52,13 @@ router.post("/send-notification", agentAuth, async (req, res) => {
         badge: "/favicon.ico",
         data: {
           notificationId: `test_${Date.now()}`,
-          clickAction: `/${recipientRole === 'user' ? 'my-tickets' : 'agent'}`,
+          clickAction: `/${recipientRole === "user" ? "my-tickets" : "agent"}`,
           type: "test",
         },
       },
     );
 
-    console.log(
-      `[TEST] Push results:`,
-      results,
-    );
+    console.log(`[TEST] Push results:`, results);
 
     await cleanupInvalidTokens(prisma, tokens, results);
 

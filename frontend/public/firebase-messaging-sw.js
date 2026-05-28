@@ -36,14 +36,39 @@ messaging.onBackgroundMessage((payload) => {
     body,
     icon: payload.notification?.icon || "/favicon.ico",
     badge: payload.notification?.badge || "/favicon.ico",
+
+    // Android-specific options for mobile notification support
+    tag: payload.data?.notificationId || title,
+    requireInteraction: false,
+
+    // Mobile-friendly vibration pattern (in milliseconds)
     vibrate: [200, 100, 200],
+
+    // Android notification priority (high = shows even on do-not-disturb)
+    priority: "high",
+
+    // Allow notification to be dismissible on Android
+    actions: [
+      {
+        action: "open",
+        title: "Open",
+      },
+      {
+        action: "close",
+        title: "Dismiss",
+      },
+    ],
+
     data: {
       ...payload.data,
       click_action: payload.data?.clickAction || "/",
+      // Extra data for Android
+      timestamp: new Date().toISOString(),
     },
-    // tag collapses duplicates — same tag = only 1 notification shown at a time
-    tag: payload.data?.notificationId || title,
-    requireInteraction: false,
+
+    // Sound and visual options
+    sound: "/notification-sound.mp3",
+    silent: false,
   };
 
   console.log("[SW] 🔔 Calling showNotification with options:", options);

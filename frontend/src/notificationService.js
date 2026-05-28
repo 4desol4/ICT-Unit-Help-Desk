@@ -183,12 +183,16 @@ export async function initializePushNotifications() {
 
     console.log("[Push] FCM token:", fcmToken.substring(0, 20) + "…");
 
+    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+    const platformType = isMobile ? "mobile-web" : "web";
+    console.log("[Push] Device detected:", isMobile ? "mobile" : "desktop");
+    console.log("[Push] Platform type:", platformType);
+    console.log("[Push] User agent:", navigator.userAgent);
+
     console.log("[Push] Registering token with backend...");
     const registerResponse = await api.post("/notifications/register", {
       token: fcmToken,
-      platform: /Mobi|Android/i.test(navigator.userAgent)
-        ? "mobile-web"
-        : "web",
+      platform: platformType,
       userAgent: navigator.userAgent,
     });
 
