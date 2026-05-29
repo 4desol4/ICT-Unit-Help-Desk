@@ -77,7 +77,7 @@ router.post("/:ticketId/user", userAuth, async (req, res) => {
               data: {
                 notificationId: `agent_message_${ticketId}`,
                 ticketId: String(ticketId),
-                clickAction: `/agent`,
+                clickAction: `/agent?ticketId=${ticketId}`,
                 type: "new_message",
               },
             },

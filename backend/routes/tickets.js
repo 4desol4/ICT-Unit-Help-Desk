@@ -158,7 +158,7 @@ router.post("/", userAuth, ticketValidation, async (req, res) => {
               data: {
                 notificationId: `ticket_created_${ticket.id}`,
                 ticketId: String(ticket.id),
-                clickAction: "/agent",
+                clickAction: `/agent?ticketId=${ticket.id}`,
                 type: "ticket_created",
               },
             },

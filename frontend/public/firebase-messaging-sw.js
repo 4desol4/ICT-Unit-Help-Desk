@@ -88,16 +88,33 @@ self.addEventListener("notificationclick", (event) => {
   console.log("[SW] 👆 Notification clicked:", event);
   event.notification.close();
 
+  // Get the click action from notification data (includes query params like ?ticketId=10)
   const clickAction = event.notification.data?.click_action || "/";
   const targetUrl = new URL(clickAction, self.location.origin).href;
 
-  console.log("[SW] Navigating to:", targetUrl);
+  console.log("[SW] Target URL from click_action:", clickAction);
+  console.log("[SW] Full URL to navigate to:", targetUrl);
 
   event.waitUntil(
     self.clients
       .matchAll({ type: "window", includeUncontrolled: true })
       .then((clientList) => {
         console.log("[SW] Found", clientList.length, "open window(s)");
+
+        // For tickets with query params, always open new/focus main window
+        if (clickAction.includes("?")) {
+          // Just open/focus the main window and let it handle the query params
+          console.log(
+            "[SW] Click action has query params, opening main window",
+          );
+          for (const client of clientList) {
+            if ("focus" in client) {
+              console.log("[SW] ✅ Focusing main window...");
+              client.focus();
+              return;
+            }
+          }
+        }
 
         // If the target page is already open — just focus it
         for (const client of clientList) {
@@ -114,8 +131,12 @@ self.addEventListener("notificationclick", (event) => {
             return client.focus();
           }
         }
-        // Otherwise open a new tab
-        console.log("[SW] No matching window found, opening new tab...");
+
+        // Otherwise open a new window with the full URL (including query params)
+        console.log(
+          "[SW] No matching window found, opening new window with URL:",
+          targetUrl,
+        );
         return self.clients.openWindow(targetUrl);
       }),
   );

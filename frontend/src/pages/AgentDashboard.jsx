@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
 import {
@@ -826,6 +826,7 @@ export default function AgentDashboard() {
   const { isDark, colors } = useTheme();
 
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -867,6 +868,23 @@ export default function AgentDashboard() {
     loadTickets();
     loadAgentStats();
   }, [loadTickets, loadAgentStats]);
+
+  // ── Handle ticketId query parameter (from notification click) ──────────
+  useEffect(() => {
+    const ticketId = searchParams.get("ticketId");
+    if (ticketId && tickets.length > 0) {
+      const ticket = tickets.find((t) => t.id === Number(ticketId));
+      if (ticket) {
+        console.log(
+          "[AgentDashboard] Opening ticket from notification:",
+          ticketId,
+        );
+        setSelected(ticket);
+        // Clean up URL
+        navigate("/agent", { replace: true });
+      }
+    }
+  }, [searchParams, tickets, navigate]);
 
   useEffect(() => {
     socket.on("new_ticket", (t) => {
