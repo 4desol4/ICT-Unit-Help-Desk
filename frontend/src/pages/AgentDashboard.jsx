@@ -886,22 +886,69 @@ export default function AgentDashboard() {
     }
   }, [searchParams, tickets, navigate]);
 
+  // ── Socket listeners for real-time updates ───────────────────────────────
   useEffect(() => {
-    socket.on("new_ticket", (t) => {
-      setTickets((prev) => [t, ...prev]);
+    if (!socket.connected) {
+      console.warn(
+        "[AgentDashboard] Socket not connected yet. Listeners may not work immediately.",
+      );
+    } else {
+      console.log(
+        "[AgentDashboard] Socket connected. Setting up real-time listeners.",
+      );
+    }
+
+    // Handle new tickets
+    const handleNewTicket = (t) => {
+      console.log("[AgentDashboard] 🎫 New ticket received via socket:", t);
+      setTickets((prev) => {
+        const exists = prev.some((ticket) => ticket.id === t.id);
+        if (exists) {
+          console.log(
+            "[AgentDashboard] Ticket already in list, updating instead",
+          );
+          return prev.map((ticket) => (ticket.id === t.id ? t : ticket));
+        }
+        console.log("[AgentDashboard] Adding new ticket to list");
+        return [t, ...prev];
+      });
       setNewAlert(true);
       setTimeout(() => setNewAlert(false), 5000);
-    });
+    };
 
-    socket.on("ticket_updated", (u) => {
+    // Handle ticket updates
+    const handleTicketUpdated = (u) => {
+      console.log("[AgentDashboard] 🔄 Ticket updated via socket:", u);
       setTickets((prev) => prev.map((t) => (t.id === u.id ? u : t)));
       // Keep the modal in sync if the updated ticket is currently open
       setSelected((prev) => (prev && prev.id === u.id ? u : prev));
-    });
+    };
+
+    // Handle new messages (for dashboard toast)
+    const handleNewMessage = ({ ticketId: tid, message }) => {
+      console.log(
+        "[AgentDashboard] 💬 New message received on ticket",
+        tid,
+        ":",
+        message,
+      );
+      // Update ticket timestamp to bubble it up in list
+      setTickets((prev) =>
+        prev.map((t) =>
+          t.id === tid ? { ...t, updatedAt: new Date().toISOString() } : t,
+        ),
+      );
+    };
+
+    socket.on("new_ticket", handleNewTicket);
+    socket.on("ticket_updated", handleTicketUpdated);
+    socket.on("new_message", handleNewMessage);
 
     return () => {
-      socket.off("new_ticket");
-      socket.off("ticket_updated");
+      console.log("[AgentDashboard] Cleaning up socket listeners");
+      socket.off("new_ticket", handleNewTicket);
+      socket.off("ticket_updated", handleTicketUpdated);
+      socket.off("new_message", handleNewMessage);
     };
   }, []);
 

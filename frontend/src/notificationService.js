@@ -148,6 +148,11 @@ export async function initializePushNotifications() {
     return null;
   }
 
+  console.log(
+    "[Push] Firebase VAPID key configured:",
+    firebaseVapidKey.substring(0, 20) + "...",
+  );
+
   try {
     console.log("[Push] Fetching or registering service worker...");
     const reg = await getSWRegistration();

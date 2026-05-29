@@ -283,6 +283,39 @@ export default function App() {
     return () => window.removeEventListener("focus", onFocus);
   }, []);
 
+  // ── Handle notification click from service worker ────────────────────────
+  // When user clicks a notification while app is open, service worker sends
+  // a postMessage. We handle that here to navigate properly.
+  useEffect(() => {
+    const handleServiceWorkerMessage = (event) => {
+      console.log("[SW Message] Received from service worker:", event.data);
+
+      if (event.data?.type === "NOTIFICATION_CLICK") {
+        const { targetUrl, clickAction } = event.data;
+        console.log("[SW Message] Handling notification click to:", targetUrl);
+
+        // Navigate to the target URL
+        if (targetUrl) {
+          // If it's a query param URL like /agent?ticketId=10, navigate will trigger
+          // the AgentDashboard useEffect to detect and open the modal
+          navigate(targetUrl);
+        }
+      }
+    };
+
+    navigator.serviceWorker?.addEventListener(
+      "message",
+      handleServiceWorkerMessage,
+    );
+
+    return () => {
+      navigator.serviceWorker?.removeEventListener(
+        "message",
+        handleServiceWorkerMessage,
+      );
+    };
+  }, [navigate]);
+
   // ── "Enable Notifications" button ─────────────────────────────────────────
   const handleEnableNotifications = async () => {
     const permission = await requestNotificationPermission();

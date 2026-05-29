@@ -44,8 +44,14 @@ router.post("/:ticketId/user", userAuth, async (req, res) => {
       },
     });
 
+    // Broadcast to all agents/users who might be listening
     req.io.emit(`chat_${ticketId}`, message);
     req.io.emit("new_message", { ticketId, message });
+    console.log(
+      "[Messages] Emitted new_message event for ticket",
+      ticketId,
+      "- agents listening will receive this",
+    );
 
     if (ticket.agentId) {
       req.io.to(`agent_${ticket.agentId}`).emit("agent_notification", {
@@ -121,8 +127,14 @@ router.post("/:ticketId/agent", agentAuth, async (req, res) => {
       },
     });
 
+    // Broadcast to all users/agents who might be listening
     req.io.emit(`chat_${ticketId}`, message);
     req.io.emit("new_message", { ticketId, message });
+    console.log(
+      "[Messages] Emitted new_message event for ticket",
+      ticketId,
+      "- users listening will receive this",
+    );
 
     // Notify user for their ticket via userId, client filters by logged-in user
     if (ticket.userId) {

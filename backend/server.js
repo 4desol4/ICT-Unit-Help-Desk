@@ -80,7 +80,16 @@ io.use((socket, next) => {
   const token =
     socket.handshake.auth?.token || socket.handshake.query?.token || null;
 
+  console.log(
+    "[Socket Auth] Connection attempt. Token present:",
+    Boolean(token),
+  );
+
   if (!token) {
+    console.warn(
+      "[Socket Auth] No token provided — allowing anonymous connection",
+    );
+    socket.data.userInfo = null;
     return next();
   }
 
@@ -90,9 +99,14 @@ io.use((socket, next) => {
       process.env.JWT_SECRET || "ict_support_secret_key",
     );
     socket.data.userInfo = decoded;
+    console.log(
+      "[Socket Auth] ✅ Token verified for:",
+      `${decoded.role}:${decoded.id}`,
+    );
     return next();
   } catch (error) {
-    console.warn("Socket auth failed:", error.message);
+    console.warn("[Socket Auth] ⚠️  Token verification failed:", error.message);
+    socket.data.userInfo = null;
     return next();
   }
 });
@@ -100,17 +114,33 @@ io.use((socket, next) => {
 io.on("connection", (socket) => {
   const auth = socket.data.userInfo;
   console.log(
-    `Connected: ${socket.id}`,
-    auth ? `${auth.role}:${auth.id}` : "anonymous",
+    "[Socket] 🔌 Connected: ",
+    socket.id,
+    auth ? `(${auth.role}:${auth.id})` : "(anonymous)",
   );
 
   if (auth) {
-    socket.join(`${auth.role}s`);
-    socket.join(`${auth.role}_${auth.id}`);
+    const roleRoom = `${auth.role}s`;
+    const userRoom = `${auth.role}_${auth.id}`;
+
+    socket.join(roleRoom);
+    socket.join(userRoom);
+
+    console.log("[Socket] 📍 Joined rooms:", roleRoom, "and", userRoom);
+
+    socket.emit("authenticated", {
+      id: socket.id,
+      user: { id: auth.id, role: auth.role },
+      rooms: [roleRoom, userRoom],
+    });
   }
 
-  socket.on("disconnect", () => {
-    console.log(`Disconnected: ${socket.id}`);
+  socket.on("disconnect", (reason) => {
+    console.log("[Socket] 🔌 Disconnected:", socket.id, "Reason:", reason);
+  });
+
+  socket.on("debug", (msg) => {
+    console.log("[Socket] Debug from client:", msg);
   });
 });
 
