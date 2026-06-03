@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "scripts": {
     "dev": "nodemon server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "prod": "NODE_ENV=production node server.js"
   },
   "dependencies": {
     "@prisma/client": "^5.0.0",

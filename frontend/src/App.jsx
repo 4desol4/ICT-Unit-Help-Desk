@@ -75,15 +75,17 @@ export default function App() {
 
   const handleNotificationClick = useCallback(
     (ticketId, targetPath = null) => {
-      const resolvedPath =
-        targetPath ||
-        (user?.role === "agent"
-          ? "/agent"
-          : user?.role === "admin"
-            ? "/admin"
-            : ticketId
-              ? `/ticket/${ticketId}`
-              : null);
+      let resolvedPath = targetPath;
+
+      if (!resolvedPath) {
+        if (user?.role === "agent") {
+          resolvedPath = ticketId ? `/agent?ticketId=${ticketId}` : "/agent";
+        } else if (user?.role === "admin") {
+          resolvedPath = ticketId ? `/admin?ticketId=${ticketId}` : "/admin";
+        } else if (ticketId) {
+          resolvedPath = `/ticket/${ticketId}`;
+        }
+      }
 
       console.log(
         "[Toast] 👆 Notification clicked. Navigating to:",

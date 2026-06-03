@@ -1,10 +1,23 @@
-# Frontend
+# Dependencies
 node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build outputs
 dist/
+dist-ssr/
+*.local
+
+# Environment variables - NEVER commit
+.env
 .env.local
+.env.production.local
 .env.development.local
+
+# Vite cache
 .vite/
-npm-debug.log*
+
 # Logs
 logs
 *.log
@@ -14,14 +27,8 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-.env
 # Editor directories and files
-.vscode/*
+.vscode/
 !.vscode/extensions.json
 .idea
 .DS_Store
@@ -30,3 +37,13 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Testing
+coverage/
+.nyc_output/
+
+# OS specific
+Thumbs.db
+*.swp
+*.swo
+*~

@@ -1,0 +1,33 @@
+# Root level ignores
+
+# Environment files - NEVER commit
+.env
+.env.local
+.env.*.local
+
+# OS specific
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.suo
+
+# Build/dist
+dist/
+build/
+
+# Logs
+logs/
+*.log
+
+# Node modules at root (if any)
+node_modules/
+
+# Testing coverage
+coverage/
+.nyc_output/
