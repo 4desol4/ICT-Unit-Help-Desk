@@ -22,7 +22,7 @@ export function isLocalNetwork() {
 // Get appropriate API base URL
 export function getApiUrl() {
   if (isLocalNetwork()) {
-    const baseUrl = `http://${window.location.hostname}:5000`;
+    const baseUrl = `http://${window.location.hostname}:5000/api`;
     console.log("[Network Detection] 🏠 LOCAL MODE - API URL:", baseUrl);
     return baseUrl;
   }
