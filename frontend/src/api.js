@@ -4,7 +4,13 @@ import { getApiUrl } from "./utils/networkDetection";
 // Detect network mode (local vs online) and use appropriate backend
 const baseURL = getApiUrl();
 
-console.log("[API] Using base URL:", baseURL);
+// Force cache bust for Vercel
+console.log(
+  "[API] Using base URL:",
+  baseURL,
+  "- Rebuilt:",
+  new Date().toISOString(),
+);
 
 const api = axios.create({
   baseURL,
