@@ -1,11 +1,10 @@
 import axios from "axios";
+import { getApiUrl } from "./utils/networkDetection";
 
-// Production: use full backend URL; Dev: use proxy
-const baseURL =
-  window.location.hostname === "localhost" ||
-  window.location.hostname === "127.0.0.1"
-    ? "/api" // Use Vite proxy in dev
-    : "https://ict-unit-help-desk.onrender.com/api"; // Use full URL in production
+// Detect network mode (local vs online) and use appropriate backend
+const baseURL = getApiUrl();
+
+console.log("[API] Using base URL:", baseURL);
 
 const api = axios.create({
   baseURL,

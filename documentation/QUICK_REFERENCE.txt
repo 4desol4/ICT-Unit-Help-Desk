@@ -1,0 +1,200 @@
+#!/bin/bash
+# Quick Reference Card - ICT Support Desk Local Network Setup
+# Print this or save as reference
+
+cat << 'EOF'
+╔══════════════════════════════════════════════════════════════════════╗
+║                                                                      ║
+║        ICT SUPPORT DESK - LOCAL NETWORK SETUP QUICK REFERENCE       ║
+║                                                                      ║
+╚══════════════════════════════════════════════════════════════════════╝
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ SETUP (First Time Only)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+WINDOWS:
+  1. Open PowerShell as Administrator
+  2. cd C:\Users\sola\Desktop\ICT\ Support\ Desk
+  3. .\setup-local.bat
+  4. Edit backend\.env (add NEON_DATABASE_URL)
+  5. .\start-local.bat
+
+MAC/LINUX:
+  1. chmod +x setup-local.sh start-local.sh
+  2. ./setup-local.sh
+  3. Edit backend/.env (add NEON_DATABASE_URL)
+  4. ./start-local.sh
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ ACCESS THE APP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FROM YOUR PC:
+  Browser: http://localhost:5173
+  Backend: http://localhost:5000
+
+FROM OTHER PCs ON SAME Wi-Fi:
+  Browser: http://ict.local:5173        (if Bonjour installed)
+  Browser: http://192.168.1.50:5173     (use actual IP)
+  Backend: http://192.168.1.50:5000
+
+FIND YOUR IP:
+  Windows: ipconfig | findstr IPv4
+  Mac:     ifconfig | grep inet
+  Linux:   hostname -I
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ DAILY STARTUP
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+WINDOWS:
+  Just double-click: start-local.bat
+
+MAC/LINUX:
+  Terminal: ./start-local.sh
+
+Both servers start automatically in new windows.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ DATABASE SYNC
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+AUTO (happens every 5 minutes):
+  - Local database syncs with Neon
+  - Check backend console for "[DBSync]" messages
+  - No action needed
+
+MANUAL SYNC:
+  curl -X POST http://localhost:5000/api/sync/trigger
+
+CHECK STATUS:
+  curl http://localhost:5000/api/sync/status
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ CONFIGURATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILE: backend/.env
+
+REQUIRED CHANGES:
+  NEON_DATABASE_URL=postgresql://...@ep-xxx.neon.tech/...?sslmode=require
+  
+  Get from: Neon Dashboard → Connection String
+
+OPTIONAL:
+  CORS_ORIGIN=http://localhost:5173,http://YOUR_IP:5173,http://ict.local:5173
+  CLIENT_URLS=http://localhost:5173,http://YOUR_IP:5173,http://ict.local:5173
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PROBLEM: ict.local doesn't work
+SOLUTION: Use IP instead: http://192.168.1.50:5173
+
+PROBLEM: Other PC can't see app
+SOLUTION: 
+  1. Both on same Wi-Fi? ✓
+  2. Use correct IP (not 127.0.0.1 or localhost)
+  3. Check firewall allows ports 5000 and 5173
+
+PROBLEM: Database sync not working
+SOLUTION:
+  1. Check backend/.env has NEON_DATABASE_URL
+  2. Verify internet connection
+  3. Look at backend console for errors
+
+PROBLEM: Setup script fails
+SOLUTION:
+  1. Run PowerShell as Administrator
+  2. Verify Node.js and PostgreSQL installed
+  3. Check versions: node --version, psql --version
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PORTS USED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+5173  Frontend (Vite dev server)
+5000  Backend API
+5432  PostgreSQL (local database)
+
+If ports already in use:
+  Windows: netstat -ano | findstr 5173
+  Mac/Linux: lsof -i :5173
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ FILES REFERENCE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Quick Help:
+  QUICK_START_LOCAL.md          ← 5-min setup guide
+  COMPLETE_SETUP_GUIDE.md       ← Full reference
+
+Detailed Guides:
+  LOCAL_NETWORK_SETUP.md        ← Step-by-step (200+ lines)
+  LOCAL_SETUP_SUMMARY.md        ← Technical details
+
+Setup Scripts:
+  setup-local.bat               ← Windows setup
+  setup-local.sh                ← Mac/Linux setup
+  start-local.bat               ← Windows startup
+  start-local.sh                ← Mac/Linux startup
+
+Code:
+  backend/utils/dbSync.js       ← Sync logic
+  frontend/src/utils/networkDetection.js ← Network detection
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ HOW IT WORKS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+LOCAL MODE:
+  User → ict.local:5173 → Local Backend (port 5000)
+                              ↓
+                        Local PostgreSQL
+                              ↓
+                        Auto-sync ↔ Neon
+
+ONLINE MODE:
+  User → Your Vercel URL → Render Backend
+                              ↓
+                           Neon Database
+
+HYBRID:
+  Both work simultaneously, data always in sync!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ WHAT YOU HAVE NOW
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+✅ App runs online (Vercel/Render)
+✅ App runs locally (office PC)
+✅ Custom hostname (ict.local)
+✅ Network sync every 5 minutes
+✅ Works offline
+✅ Automatic setup & startup scripts
+✅ Full documentation
+✅ Production ready
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ QUICK TEST CHECKLIST
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+□ Run setup-local.bat/sh
+□ Update backend/.env with Neon URL
+□ Run start-local.bat/sh
+□ Access http://localhost:5173
+□ Access http://192.168.1.50:5173 from phone
+□ Submit ticket from local
+□ Check backend console for "[DBSync]" message
+□ Verify data synced to online after 5 min
+□ Test accessing online version
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+💡 TIP: Keep this file open while setting up!
+
+For detailed guide: See LOCAL_NETWORK_SETUP.md
+
+EOF

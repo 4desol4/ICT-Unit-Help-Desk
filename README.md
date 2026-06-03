@@ -2,12 +2,32 @@
 
 A lightweight support desk web application with separate backend and frontend, featuring real-time chat, push notifications, and agent dashboard.
 
+**Now with hybrid deployment:** Run online via Vercel + Render, or locally on your office network with automatic database sync!
+
 ## Overview
 
 - **Backend:** Node.js + Express server located in `backend/` using Prisma ORM for database management. Server entry: `backend/server.js`.
 - **Frontend:** Vite + React app located in `frontend/` with pages for users, agents, and admins. Key components in `frontend/src/components/`.
 - **Real-time:** Socket.io integration for real-time notifications and chat messaging.
 - **Notifications:** Firebase Cloud Messaging for push notifications and Cloudinary for image hosting.
+- **Hybrid Deployment:** Runs online (Vercel/Render/Neon) AND locally on office network with automatic sync.
+
+## Deployment Options
+
+### 🌐 Online (Production)
+
+- Frontend: Vercel
+- Backend: Render/Railway
+- Database: Neon PostgreSQL
+- Access: Your custom domain
+
+### 🏠 Local Network (New!)
+
+- Run on office PC
+- Access via `ict.local` or local IP
+- All staff on same Wi-Fi can use it
+- Works offline, syncs when internet returns
+- **Setup:** See [QUICK_START_LOCAL.md](QUICK_START_LOCAL.md) (5 minutes)
 
 ## Quick Start
 

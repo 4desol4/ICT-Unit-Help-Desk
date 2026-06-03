@@ -16,6 +16,7 @@ const agentRoutes = require("./routes/agents");
 const messageRoutes = require("./routes/messages");
 const imageRoutes = require("./routes/images");
 const notificationRoutes = require("./routes/notifications");
+const DatabaseSync = require("./utils/dbSync");
 
 const app = express();
 const server = http.createServer(app);
@@ -72,6 +73,60 @@ app.use("/api/notifications", notificationRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "ICT Support Desk API running ✅" });
+});
+
+// ─── Database Sync (for local network mode) ─────────────
+// When DATABASE_URL differs from NEON_DATABASE_URL, auto-sync is enabled
+const dbSync = new DatabaseSync({
+  syncInterval: 5 * 60 * 1000, // 5 minutes
+  syncMode: "pull", // Pull from Neon (source of truth)
+});
+
+if (dbSync.enabled) {
+  console.log("[Server] 🔄 Database sync is ENABLED");
+
+  // Auto-sync on startup if auto-sync is not disabled
+  if (process.env.AUTO_SYNC !== "false") {
+    dbSync.startAutoSync();
+  }
+} else {
+  console.log("[Server] 📊 Using single database (no sync)");
+}
+
+// Sync status endpoint
+app.get("/api/sync/status", (req, res) => {
+  res.json(dbSync.getStatus());
+});
+
+// Manual sync trigger endpoint (requires admin auth in production)
+app.post("/api/sync/trigger", (req, res) => {
+  if (!dbSync.enabled) {
+    return res.status(400).json({
+      error: "Database sync not enabled - only one database configured",
+      status: dbSync.getStatus(),
+    });
+  }
+
+  console.log("[Sync] Manual sync triggered via API");
+
+  dbSync
+    .syncBidirectional()
+    .then((success) => {
+      res.json({
+        success,
+        lastSync: dbSync.lastSyncTime,
+        message: success
+          ? "Database sync completed successfully"
+          : "Database sync failed - check backend logs",
+        status: dbSync.getStatus(),
+      });
+    })
+    .catch((err) => {
+      res.status(500).json({
+        error: err.message,
+        status: dbSync.getStatus(),
+      });
+    });
 });
 
 io.use((socket, next) => {

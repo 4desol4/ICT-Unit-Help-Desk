@@ -1,10 +1,10 @@
 import { io } from "socket.io-client";
 import { getToken } from "./api";
+import { getSocketUrl } from "./utils/networkDetection";
 
-const socketUrl =
-  import.meta.env.VITE_SOCKET_URL || "https://ict-unit-help-desk.onrender.com";
+const socketUrl = getSocketUrl();
 
-console.log("[Socket] URL:", socketUrl);
+console.log("[Socket] Connecting to:", socketUrl);
 
 const socket = io(socketUrl, {
   autoConnect: false,
