@@ -61,7 +61,15 @@ npm install
 ```env
 NODE_ENV=development
 PORT=5000
+
+# DEVELOPMENT DATABASE (Local PostgreSQL)
 DATABASE_URL=postgresql://user:password@localhost:5432/ict_support_desk
+
+# PRODUCTION DATABASE (Neon Cloud)
+# Get from: Neon Dashboard → Connection String
+NEON_DATABASE_URL=postgresql://user:password@ep-xxxx.neon.tech/dbname?sslmode=require
+
+# Other Configuration
 JWT_SECRET=your-secret-key-here
 CLIENT_URLS=http://localhost:5173
 FIREBASE_SERVICE_ACCOUNT_JSON=./firebase-service-account.json
@@ -206,7 +214,7 @@ Quick deployment options:
 
 ### Database Connection Errors
 
-- Verify `DATABASE_URL` is correct and accessible
+- Verify `DATABASE_URL` is correct and accessible (local PostgreSQL or Neon connection string)
 - Check database credentials and host
 - Ensure PostgreSQL is running locally
 - Run migrations: `npx prisma migrate deploy`

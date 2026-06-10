@@ -94,15 +94,23 @@ cd "C:\Users\sola\Desktop\ICT Support Desk"
 - ✅ Creates `backend\.env` file
 - ✅ Sets up Prisma tables
 
-### Step 2: Update Neon Connection
+### Step 2: Update Database Connection
 
 Edit `backend\.env` and update this line:
 
+**For local development:**
+
 ```env
-NEON_DATABASE_URL=postgresql://username:password@ep-xxxx.neon.tech/ict_support_desk?sslmode=require
+DATABASE_URL=postgresql://username:password@localhost:5432/ict_support_desk
 ```
 
-Get from: **Neon Dashboard → Connection String**
+**For production with Neon:**
+
+```env
+DATABASE_URL=postgresql://username:password@ep-xxxx.neon.tech/ict_support_desk?sslmode=require
+```
+
+Get from: **Neon Dashboard → Connection String** (for Neon) or your local PostgreSQL connection details
 
 ### Step 3: Start Everything
 
@@ -227,21 +235,24 @@ Internet UP:
 ### `backend/.env` Template
 
 ```env
-# Server
+# Server Configuration
 NODE_ENV=development
 PORT=5000
 
-# Local database (primary - for offline)
+# DEVELOPMENT DATABASE (Local PostgreSQL)
+# Used when NODE_ENV is NOT 'production'
 DATABASE_URL=postgresql://ict_local_user:local_password@localhost:5432/ict_support_local
 
-# Neon database (source of truth - online)
+# PRODUCTION DATABASE (Neon Cloud)
+# Used when NODE_ENV='production'
+# Get from: Neon Dashboard → Connection String
 NEON_DATABASE_URL=postgresql://user:pass@ep-xxx.neon.tech/db?sslmode=require
 
-# Network access (auto-filled by setup script)
+# Network Configuration
 CORS_ORIGIN=http://localhost:5173,http://192.168.1.50:5173,http://ict.local:5173
 CLIENT_URLS=http://localhost:5173,http://192.168.1.50:5173,http://ict.local:5173
 
-# Keep existing config
+# Firebase & Other Services
 JWT_SECRET=your_secret_here
 FIREBASE_SERVICE_ACCOUNT_JSON=./firebase-service-account.json
 CLOUDINARY_CLOUD_NAME=your_cloud
@@ -294,7 +305,7 @@ Before going live, verify:
 | PostgreSQL error            | Install PostgreSQL, verify it's running                      |
 | Backend won't start         | Check PORT 5000 isn't in use: `netstat -ano \| findstr 5000` |
 | Frontend can't find backend | Check `backend\.env` CORS_ORIGIN includes your IP            |
-| Sync not working            | Check NEON_DATABASE_URL in .env is correct                   |
+| Sync not working            | Check DATABASE_URL in .env is correct                        |
 | Other PC can't see app      | Firewall issue - add rule for ports 5000, 5173               |
 
 ---
@@ -304,10 +315,9 @@ Before going live, verify:
 ### How Sync Works
 
 1. **Every 5 minutes** (configurable):
-   - Backend checks if `NEON_DATABASE_URL` is set
-   - Creates backup of Neon database
-   - Restores to local PostgreSQL
-   - Cleans up temporary backup file
+   - Backend pulls data from the source database
+   - Syncs to local PostgreSQL if in offline mode
+   - Handles connection issues gracefully
    - Logs "[DBSync] ✅ Pull from Neon complete"
 
 2. **On app startup**:

@@ -179,13 +179,26 @@ chmod +x setup-local.sh
 
 ### **2. Update .env** (1 minute)
 
-Edit `backend/.env` and add your Neon URL:
+Edit `backend/.env` with both database configurations:
+
+**Development (Local):**
+
+```env
+DATABASE_URL=postgresql://user:pass@localhost:5432/dbname
+```
+
+**Production (Neon):**
 
 ```env
 NEON_DATABASE_URL=postgresql://user:pass@ep-xxx.neon.tech/db?sslmode=require
 ```
 
-Get from: **Neon Dashboard → Connection String**
+Get Neon URL from: **Neon Dashboard → Connection String**
+
+**How it works:**
+
+- When `NODE_ENV=development` (default): Uses `DATABASE_URL` (local PostgreSQL)
+- When `NODE_ENV=production`: Uses `NEON_DATABASE_URL` (Neon cloud)
 
 ### **3. Start Servers** (Daily)
 

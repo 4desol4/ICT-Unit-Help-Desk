@@ -6,8 +6,15 @@ const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
 const isProduction = process.env.NODE_ENV === "production";
-if (!isProduction && process.env.DATABASE_URL_LOCAL) {
-  process.env.DATABASE_URL = process.env.DATABASE_URL_LOCAL;
+
+// ─── Database URL Configuration ───────────────────────────
+// Development: Use DATABASE_URL (local PostgreSQL)
+// Production: Use NEON_DATABASE_URL (Neon cloud database)
+if (isProduction && process.env.NEON_DATABASE_URL) {
+  process.env.DATABASE_URL = process.env.NEON_DATABASE_URL;
+  console.log("[Config] Using NEON_DATABASE_URL for production");
+} else if (!isProduction && process.env.DATABASE_URL) {
+  console.log("[Config] Using DATABASE_URL for development");
 }
 
 const ticketRoutes = require("./routes/tickets");
@@ -76,10 +83,10 @@ app.get("/", (req, res) => {
 });
 
 // ─── Database Sync (for local network mode) ─────────────
-// When DATABASE_URL differs from NEON_DATABASE_URL, auto-sync is enabled
+// Syncs data from primary database to local PostgreSQL
 const dbSync = new DatabaseSync({
   syncInterval: 5 * 60 * 1000, // 5 minutes
-  syncMode: "pull", // Pull from Neon (source of truth)
+  syncMode: "pull", // Pull from primary database
 });
 
 if (dbSync.enabled) {

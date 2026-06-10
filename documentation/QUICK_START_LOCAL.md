@@ -53,17 +53,28 @@ cd "C:\Users\sola\Desktop\ICT Support Desk"
 - PostgreSQL password = your `postgres` user password
 - Save the IP address shown (e.g., `192.168.1.50`)
 
-### 3️⃣ Configure Neon Connection (1 minute)
+### 3️⃣ Configure Database Connection (1 minute)
 
-Open `backend\.env` and update this line with your actual Neon connection:
+Open `backend\.env` and update with your database connections:
+
+**Development (Local PostgreSQL):**
+
+```env
+DATABASE_URL=postgresql://username:password@localhost:5432/ict_support_desk
+```
+
+**Production (Neon Cloud):**
 
 ```env
 NEON_DATABASE_URL=postgresql://username:password@ep-xxxx.neon.tech/ict_support_desk?sslmode=require
 ```
 
-Get your Neon connection string from:
+Get your Neon connection string from: **Neon Dashboard → Project → Connection → Connection String**
 
-- Neon Dashboard → Project → Connection → Connection String
+Get your connection string from:
+
+- **Local:** PostgreSQL connection details
+- **Neon:** Neon Dashboard → Project → Connection → Connection String
 - Copy the **whole string** starting with `postgresql://`
 
 ### 4️⃣ Start Everything
@@ -129,7 +140,7 @@ User on Wi-Fi → ict.local:5173 (Frontend)
 
 - Did you run setup script? `.\setup-local.bat`
 - Is PostgreSQL running? Check Windows Services
-- Edit `backend\.env` - verify DATABASE_URL
+- Edit `backend\.env` - verify `DATABASE_URL` is correct
 
 ### ❌ "ict.local not working"
 

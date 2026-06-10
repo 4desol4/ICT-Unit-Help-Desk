@@ -54,15 +54,13 @@ class DatabaseSync {
     const parsed = this.parseDbUrl(dbUrl);
     if (!parsed) return null;
 
-    let cmd = `pg_dump`;
+    // Use full path to pg_dump for Windows compatibility
+    const pgBinPath = process.env.PG_BIN_PATH || 'C:\\Program Files\\PostgreSQL\\18\\bin';
+    let cmd = `"${pgBinPath}\\pg_dump.exe"`;
     cmd += ` -h ${parsed.host}`;
     cmd += ` -p ${parsed.port}`;
     cmd += ` -U ${parsed.username}`;
     cmd += ` -d ${parsed.database}`;
-
-    if (parsed.ssl) {
-      cmd = `PGSSLMODE=require ${cmd}`;
-    }
 
     return cmd;
   }
@@ -74,15 +72,13 @@ class DatabaseSync {
     const parsed = this.parseDbUrl(dbUrl);
     if (!parsed) return null;
 
-    let cmd = `psql`;
+    // Use full path to psql for Windows compatibility
+    const pgBinPath = process.env.PG_BIN_PATH || 'C:\\Program Files\\PostgreSQL\\18\\bin';
+    let cmd = `"${pgBinPath}\\psql.exe"`;
     cmd += ` -h ${parsed.host}`;
     cmd += ` -p ${parsed.port}`;
     cmd += ` -U ${parsed.username}`;
     cmd += ` -d ${parsed.database}`;
-
-    if (parsed.ssl) {
-      cmd = `PGSSLMODE=require ${cmd}`;
-    }
 
     return cmd;
   }
@@ -101,6 +97,11 @@ class DatabaseSync {
       console.log("[DBSync] 📥 Pulling from Neon to Local...");
       const backupFile = path.join(__dirname, ".sync_neon_backup.sql");
 
+      // Clean up old backup file if it exists
+      if (fs.existsSync(backupFile)) {
+        fs.unlinkSync(backupFile);
+      }
+
       // Export from Neon
       const dumpCmd = this.buildDumpCommand(this.neonDbUrl);
       if (!dumpCmd) {
@@ -109,9 +110,16 @@ class DatabaseSync {
 
       console.log("[DBSync] Exporting from Neon...");
       const neonPassword = this.parseDbUrl(this.neonDbUrl).password;
-      const env = { ...process.env, PGPASSWORD: neonPassword };
+      const neonParsed = this.parseDbUrl(this.neonDbUrl);
+      const env = {
+        ...process.env,
+        PGPASSWORD: neonPassword,
+        PGSSLMODE: neonParsed.ssl ? "require" : "disable",
+      };
 
-      execSync(`${dumpCmd} > "${backupFile}"`, { env, stdio: "pipe" });
+      // Use spawn for better stream handling on Windows
+      const dumpOutput = execSync(dumpCmd, { env, stdio: "pipe" }).toString();
+      fs.writeFileSync(backupFile, dumpOutput);
 
       // Restore to Local
       console.log("[DBSync] Restoring to Local...");
@@ -121,11 +129,18 @@ class DatabaseSync {
       }
 
       const localPassword = this.parseDbUrl(this.localDbUrl).password;
-      const localEnv = { ...process.env, PGPASSWORD: localPassword };
+      const localParsed = this.parseDbUrl(this.localDbUrl);
+      const localEnv = {
+        ...process.env,
+        PGPASSWORD: localPassword,
+        PGSSLMODE: localParsed.ssl ? "require" : "disable",
+      };
 
-      execSync(`${restoreCmd} < "${backupFile}"`, {
+      const backupContent = fs.readFileSync(backupFile, "utf-8");
+      execSync(restoreCmd, {
         env: localEnv,
         stdio: "pipe",
+        input: backupContent,
       });
 
       // Clean up
@@ -158,6 +173,11 @@ class DatabaseSync {
       console.log("[DBSync] 📤 Pushing from Local to Neon...");
       const backupFile = path.join(__dirname, ".sync_local_backup.sql");
 
+      // Clean up old backup file if it exists
+      if (fs.existsSync(backupFile)) {
+        fs.unlinkSync(backupFile);
+      }
+
       // Export from Local
       console.log("[DBSync] Exporting from Local...");
       const dumpCmd = this.buildDumpCommand(this.localDbUrl);
@@ -166,9 +186,16 @@ class DatabaseSync {
       }
 
       const localPassword = this.parseDbUrl(this.localDbUrl).password;
-      const env = { ...process.env, PGPASSWORD: localPassword };
+      const localParsed = this.parseDbUrl(this.localDbUrl);
+      const env = {
+        ...process.env,
+        PGPASSWORD: localPassword,
+        PGSSLMODE: localParsed.ssl ? "require" : "disable",
+      };
 
-      execSync(`${dumpCmd} > "${backupFile}"`, { env, stdio: "pipe" });
+      // Use spawn for better stream handling on Windows
+      const dumpOutput = execSync(dumpCmd, { env, stdio: "pipe" }).toString();
+      fs.writeFileSync(backupFile, dumpOutput);
 
       // Restore to Neon
       console.log("[DBSync] Restoring to Neon...");
@@ -178,11 +205,18 @@ class DatabaseSync {
       }
 
       const neonPassword = this.parseDbUrl(this.neonDbUrl).password;
-      const neonEnv = { ...process.env, PGPASSWORD: neonPassword };
+      const neonParsed = this.parseDbUrl(this.neonDbUrl);
+      const neonEnv = {
+        ...process.env,
+        PGPASSWORD: neonPassword,
+        PGSSLMODE: neonParsed.ssl ? "require" : "disable",
+      };
 
-      execSync(`${restoreCmd} < "${backupFile}"`, {
+      const backupContent = fs.readFileSync(backupFile, "utf-8");
+      execSync(restoreCmd, {
         env: neonEnv,
         stdio: "pipe",
+        input: backupContent,
       });
 
       // Clean up

@@ -160,20 +160,20 @@ npm install
 NODE_ENV=development
 PORT=5000
 
-# LOCAL DATABASE (Primary - for offline mode)
+# DEVELOPMENT DATABASE (Local PostgreSQL)
+# This is the primary database for local development
 DATABASE_URL=postgresql://ict_local_user:secure_local_password@localhost:5432/ict_support_local
 
-# NEON DATABASE (Secondary - for syncing)
+# PRODUCTION DATABASE (Neon Cloud)
+# Used when deployed to production (NODE_ENV=production)
+# Get from: Neon Dashboard → Connection String
 NEON_DATABASE_URL=postgresql://neon_user:neon_password@ep-xxx.neon.tech/ict_support_desk?sslmode=require
 
 # Network Configuration
-# Allow connections from local network
 CORS_ORIGIN=http://localhost:5173,http://192.168.1.50:5173,http://ict.local:5173
-
-# Frontend URLs (comma-separated)
 CLIENT_URLS=http://localhost:5173,http://192.168.1.50:5173,http://ict.local:5173
 
-# Existing credentials
+# Firebase & Other Services
 JWT_SECRET=your-existing-jwt-secret
 FIREBASE_SERVICE_ACCOUNT_JSON=./firebase-service-account.json
 CLOUDINARY_CLOUD_NAME=your_cloud_name
@@ -181,11 +181,12 @@ CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
 ```
 
-**Replace:**
+**Configuration Details:**
 
-- `192.168.1.50` = Your server PC's actual IP
-- `neon_user` and `neon_password` = Your Neon credentials
-- `ep-xxx.neon.tech` = Your Neon connection string from dashboard
+- `DATABASE_URL` = Used in development (local PostgreSQL)
+- `NEON_DATABASE_URL` = Used in production (Neon cloud database)
+- When `NODE_ENV=production`, the backend automatically uses `NEON_DATABASE_URL`
+- Replace `192.168.1.50` with your server PC's actual IP
 
 ---
 
@@ -239,7 +240,7 @@ const path = require("path");
 class DatabaseSync {
   constructor() {
     this.localDbUrl = process.env.DATABASE_URL;
-    this.neonDbUrl = process.env.NEON_DATABASE_URL;
+    // Note: Prisma only uses DATABASE_URL for connections
     this.syncInterval = 5 * 60 * 1000; // 5 minutes
     this.lastSyncTime = null;
   }
